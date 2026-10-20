@@ -1,0 +1,4 @@
+{
+  "_comment": "Local stand-in for Apache Atlas. METADATA_BACKEND=stub reads this; METADATA_BACKEND=atlas ignores it. Populated for real by data/ddl.sql tables.",
+  "entities": {}
+}

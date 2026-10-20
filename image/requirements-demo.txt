@@ -1,0 +1,12 @@
+# Demo-specific packages installed into the shared kernel venv.
+# The same venv runs inside Prime Agent's REPL (lakehouse and atlas skills)
+# and the FastMCP bridge and console apps. prime-agent-runtime 0.10.0 pins
+# mcp>=2,<3, so mcp is left to the resolver inside that range.
+impyla==0.24.0
+pyarrow==26.0.0
+pandas==2.3.3
+mcp>=2,<3
+fastmcp==4.1.2
+streamlit==1.66.0
+python-dotenv==1.2.4
+pydantic>=2.12,<3

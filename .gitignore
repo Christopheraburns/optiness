@@ -1,0 +1,13 @@
+.env
+*.log
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/staging/
+data/out/
+docs/screens/
+image/pa.tar.gz
+*.sqlite
+*.sqlite3
+.DS_Store
