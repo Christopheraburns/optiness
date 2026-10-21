@@ -11,14 +11,16 @@
 #   make up                 # impala + bridge + console
 #   make tunnel             # expose the bridge for a Mistral Studio connector
 
-name: primeagent
+name: optiness
 
 x-impala-conf: &impala-conf
   - ./quickstart_conf:/opt/impala/conf:ro
 
 x-runtime-app: &runtime-app
   image: ${RUNTIME_IMAGE:-christopheraburns/prime-agent-runtime:0.10.0}
-  platform: linux/amd64
+  # Apple Silicon: RUNTIME_IMAGE=prime-agent-runtime:0.10.0-local-arm64 and
+  # RUNTIME_PLATFORM=linux/arm64 (make image-local); see image/Dockerfile.
+  platform: ${RUNTIME_PLATFORM:-linux/amd64}
   env_file:
     - ../../.env
   volumes:
@@ -150,7 +152,7 @@ services:
   # ------------------------------------------------------- Workbench apps
   bridge:
     <<: *runtime-app
-    container_name: primeagent-bridge
+    container_name: optiness-bridge
     environment:
       - CDSW_APP_PORT=8080
       - BIND_HOST=0.0.0.0
@@ -168,7 +170,7 @@ services:
 
   console:
     <<: *runtime-app
-    container_name: primeagent-console
+    container_name: optiness-console
     environment:
       - CDSW_APP_PORT=8090
       - BIND_HOST=0.0.0.0
@@ -182,7 +184,7 @@ services:
   tunnel:
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
-    container_name: primeagent-tunnel
+    container_name: optiness-tunnel
     depends_on:
       - bridge
     # With a token: a named tunnel you configured in Cloudflare Zero Trust.
@@ -206,4 +208,4 @@ volumes:
 # underscores in hostnames (the upstream quickstart uses quickstart-network).
 networks:
   default:
-    name: primeagent-net
+    name: optiness-net

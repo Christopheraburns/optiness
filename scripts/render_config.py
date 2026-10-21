@@ -170,6 +170,75 @@ def validate(doc: dict) -> list[str]:
     return problems
 
 
+TEMPLATES = Path(__file__).resolve().parents[1] / "config" / "templates"
+INVESTIGATION_NOTE_ID = "investigation-method"
+# The harness digest shows each entry as a summary of at most 140 chars (pa-core
+# refinement DEFAULT_OVERVIEW_CONTENT_LIMIT, v0.10.0), so the full method goes to
+# AGENTS.md, which prime-agent puts in the system prompt whole. The harness entry
+# is the short form that survives the digest.
+DIGEST_CONTENT_LIMIT = 140
+HARNESS_NOTE = ("Investigations: follow the AGENTS.md method; read each skill's SKILL.md first; "
+                "every number from a tool result; cite SQL and row counts.")
+
+
+def investigation_note(s) -> str:
+    """The full investigation method (AGENTS.md), rendered from its template."""
+    from string import Template
+
+    return Template((TEMPLATES / "investigation-note.md").read_text()).substitute(
+        database=s.impala.database, max_children=s.max_children, rlm_max_depth=s.rlm_max_depth).strip()
+
+
+SUBAGENT_SPEC_ID = "partition-investigator"
+
+
+def partition_investigator_spec(s) -> str:
+    """The partition-investigator subagent spec (E6), rendered from its template.
+
+    Its first line is the digest summary (<= 140 chars) and points at the full text.
+    """
+    from string import Template
+
+    return Template((TEMPLATES / "partition-investigator.md").read_text()).substitute(
+        database=s.impala.database, max_children=s.max_children, child_model=s.child_model.selector).strip()
+
+
+def managed_harness_entries(s) -> list[tuple[str, str, str, str]]:
+    """(kind, id, title, content) of every global harness entry this project owns."""
+    return [
+        ("prompt", INVESTIGATION_NOTE_ID, "Investigation method", HARNESS_NOTE),
+        ("subagent", SUBAGENT_SPEC_ID, "Partition investigator", partition_investigator_spec(s)),
+    ]
+
+
+def seed_harness(s) -> str:
+    """Upsert this project's entries into the global harness state (E5, E6).
+
+    Uses prime-agent's own harness API, so the file format and locking stay
+    theirs; needs the kernel Python (the image entrypoint runs this script with
+    it). Agent-made entries are left alone; only the managed ids are touched.
+    """
+    try:
+        from rlm.harness import get_harness_state
+    except ImportError:
+        return "skipped (rlm runtime not importable; run with PRIME_AGENT_KERNEL_PYTHON)"
+    state = get_harness_state(global_=True)
+    results = []
+    for kind, entry_id, title, content in managed_harness_entries(s):
+        meta = {"source": "config/templates", "managedBy": "scripts/render_config.py"}
+        current = state.get(kind, entry_id, global_=True)
+        if current is None:
+            state.create(kind, title, content, id=entry_id, path="policy" if kind == "prompt" else "general",
+                         metadata=meta, global_=True)
+            results.append(f"{entry_id} created")
+        elif current.content != content or current.title != title:
+            state.update(kind, entry_id, title, content, metadata=meta, global_=True)
+            results.append(f"{entry_id} updated")
+        else:
+            results.append(f"{entry_id} unchanged")
+    return ", ".join(results)
+
+
 def unimportable_skills(skills_dir: Path) -> list[str]:
     """Executable skills (a pyproject.toml beside SKILL.md) whose src dir is not on
     PYTHONPATH. prime-agent disables those with one easily missed warning, and a
@@ -181,7 +250,10 @@ def unimportable_skills(skills_dir: Path) -> list[str]:
 
 
 def write_json(path: Path, payload: dict) -> bool:
-    text = json.dumps(payload, indent=2) + "\n"
+    return write_text(path, json.dumps(payload, indent=2) + "\n")
+
+
+def write_text(path: Path, text: str) -> bool:
     if path.exists() and path.read_text() == text:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -211,6 +283,10 @@ def main() -> int:
     print(f"[render_config] agent_dir={agent_dir}")
     print(f"[render_config] models.json {'written' if changed_models else 'unchanged'}")
     print(f"[render_config] settings.json {'written' if changed_settings else 'unchanged'}")
+    s.agent_workdir.mkdir(parents=True, exist_ok=True)
+    changed_agents = write_text(s.agent_workdir / "AGENTS.md", investigation_note(s) + "\n")
+    print(f"[render_config] {s.agent_workdir / 'AGENTS.md'} {'written' if changed_agents else 'unchanged'}")
+    print(f"[render_config] harness: {seed_harness(s)}")
     for k, v in redacted(s).items():
         print(f"[render_config]   {k}={v}")
     for problem in unimportable_skills(s.skills_dir):

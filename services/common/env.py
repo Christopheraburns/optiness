@@ -92,6 +92,7 @@ class Settings:
     compaction_threshold_tokens: int
     impala_mcp_url: str
     skills_dir: Path
+    agent_workdir: Path
 
     mistral_api_key: str
     mistral_base_url: str
@@ -138,6 +139,7 @@ def settings() -> Settings:
         compaction_threshold_tokens=_int(os.environ.get("COMPACTION_THRESHOLD_TOKENS"), 96_000),
         impala_mcp_url=_str("IMPALA_MCP_URL").rstrip("/"),
         skills_dir=Path(_str("SKILLS_DIR", str(home / "skills"))),
+        agent_workdir=Path(_str("AGENT_WORKDIR", str(home / "data" / "agent"))),
         mistral_api_key=_str("MISTRAL_API_KEY"),
         mistral_base_url=_str("MISTRAL_BASE_URL", "https://api.mistral.ai"),
         impala=ImpalaSettings(

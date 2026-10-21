@@ -9,7 +9,12 @@
 #
 # Build (from repo root):
 #   docker build -t prime-agent-runtime:0.10.0 -f image/Dockerfile image
-#   docker build --build-arg TARGETARCH=arm64 ... for Apple Silicon local runs
+#   make image-local   # Apple Silicon: native arm64 on a python:3.11-slim base (local only)
+#
+# The Cloudera base is amd64-only. On Apple Silicon, Docker Desktop must run it
+# under Rosetta (Impala needs AVX, which QEMU lacks), and the Prime Agent daemon
+# crashes under Rosetta, so local runs use a native arm64 build of this same
+# Dockerfile on a plain Python base. Workbench always uses the Cloudera base.
 #
 # Cloudera base image tags are listed on the Workbench "Start Session" page.
 
@@ -44,8 +49,13 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # thrift-sasl, curl and ca-certificates for the downloads below.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl tini git libsasl2-dev libsasl2-modules-gssapi-mit \
+      ca-certificates curl tini git procps libsasl2-dev libsasl2-modules-gssapi-mit \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# The Cloudera base already has cdsw (uid 8536); a plain Python base does not.
+RUN id -u 8536 >/dev/null 2>&1 || useradd --uid 8536 --user-group --home-dir /home/cdsw --no-create-home --shell /bin/bash cdsw
+# Login shells (bash -l, used by make targets) re-read /etc/profile, which resets PATH on Debian.
+RUN echo 'case ":$PATH:" in *:/opt/prime-agent/bin:*) ;; *) export PATH="/opt/prime-agent/bin:$PATH" ;; esac' > /etc/profile.d/prime-agent.sh
 
 # ---------------------------------------------------------------------------
 # uv: Prime Agent's kernel bootstrap looks for uv on PATH or ~/.local/bin/uv.
@@ -129,6 +139,7 @@ RUN chown -R root:root /opt/prime-agent \
  && mkdir -p /home/cdsw && chown 8536:8536 /home/cdsw
 
 ENV PATH="/opt/prime-agent/bin:${PATH}" \
+    HOME=/home/cdsw \
     TMPDIR=/tmp \
     PYTHONUNBUFFERED=1 \
     PRIME_AGENT_VERSION=${PRIME_AGENT_VERSION}

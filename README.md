@@ -1,7 +1,8 @@
-# Prime Agent on Cloudera AI for Mistral Studio
+# Optiness: Prime Agent on Cloudera AI for Mistral Studio
 
-A Mistral Studio agent investigates a retail returns spike across 50 million
-Apache Iceberg records by calling a Prime Agent (Recursive Language Model
+Optiness ("optimal" + "harness") is the harness-and-lakehouse integration built on the
+open-source Prime Agent RLM harness. A Mistral Studio agent investigates a payments decline
+spike in the Meridian Financial dataset (50 million Apache Iceberg records) by calling a Prime Agent (Recursive Language Model
 harness) hosted in Cloudera AI Workbench. The root agent plans in a persistent
 Python REPL, runs Impala SQL, and delegates partition-scoped investigations to
 Ministral children. Every finding carries the SQL and row counts that back it.

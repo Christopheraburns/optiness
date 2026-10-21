@@ -20,12 +20,12 @@ tags = await atlas.classifications("customers")        # list of classification 
 
 ## API
 
-- `search(term, limit=20)`: tables whose name, qualified name, description or
+- `search(term, *, limit=20)`: tables whose name, qualified name, description or
   column names contain `term`. DataFrame: `qualified_name`, `name`, `owner`,
   `classifications`, `description`.
 - `entity(table)`: one table as a dict: `qualified_name`, `name`, `description`,
   `owner`, `columns` (list of `{name, type}`), `classifications`.
-- `lineage(table)`: dict with `inputs` and `outputs` (qualified names) and
+- `lineage(table, *, depth=3)`: dict with `inputs` and `outputs` (qualified names) and
   `processes` (each edge; `fk_<column>` edges are join keys, `impala_insert_*`
   edges are load jobs).
 - `classifications(table)`: list of classification names.

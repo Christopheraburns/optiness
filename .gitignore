@@ -15,4 +15,5 @@ image/pa.tar.gz
 # runtime state written into the bind-mounted project (mirrors Workbench)
 .prime/
 data/bridge/
+data/agent/
 .cache/

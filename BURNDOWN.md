@@ -1,4 +1,4 @@
-# Burn-down: Prime Agent on Cloudera AI Workbench for Mistral Studio
+# Burn-down: Optiness (Prime Agent on Cloudera AI Workbench for Mistral Studio)
 
 Target: Evolve NY, 2026-10-27. Status values: Todo / Doing / Done / Blocked / Cut.
 Estimates are hours. "Local" means Docker Desktop; "CAI" means Cloudera AI Workbench.
@@ -53,6 +53,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | C5 | cloudflared (or ngrok) compose service exposing the bridge over public HTTPS for Studio during development. Written and validated; run `make tunnel` when ready to publish | Public URL answers `/healthz` | 1 | Doing |
 | C6 | Compose services for bridge and console using the runtime image, `.env`, `/home/cdsw` volume | `make up` brings everything green | 1 | Done |
 | C7 | Local smoke: Prime Agent in container queries local Impala via the lakehouse skill | `make smoke` passes | 1 | Done |
+| C8 | Local daemon on Apple Silicon. Rosetta crashes the Prime Agent daemon; QEMU breaks Impala (no AVX). Fixed: Docker Desktop on Rosetta for Impala, bridge/console on a native arm64 build of `image/Dockerfile` (`make image-local`: python:3.11-slim base, local only; `RUNTIME_IMAGE`/`RUNTIME_PLATFORM` in `.env`). Workbench keeps the Cloudera amd64 image, no new runtime needed. Verified 2026-10-21: daemon `current`, ACP root spawned two children, Impala up, `make test-impala` 8/8 | `prime-agent status` shows a running daemon and a probe `rlm.spawn` returns a handle, with Impala up | 2 | Done |
 
 ## D. Data
 
@@ -74,10 +75,10 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | E2 | `settings.json` rendered by `scripts/render_config.py`, keys checked against pa-core v0.10.0 `Settings`: `rlmMaxDepth`, skills dir, `subagentDefaultModel`; compaction via `reserveTokens` solved so the smallest root/child window compacts at `COMPACTION_THRESHOLD_TOKENS` (96k: caps per-call tokens against Mistral's 2M tokens/min); `retry` 5 x from 2 s (covers a one-minute rate-limit window); `allowedModels: ["mistral/*"]` (daemon-enforced only; verified not applied in `-p` print mode, check under `--mode rpc` in F3); optional `mcpServers.impala` when `IMPALA_MCP_URL` is set. Fixed: the old `compaction.thresholdPercent` is not a real key and was silently ignored | prime-agent loads settings leniently and never warns (unknown keys kept, wrong types dropped), so: `render_config` validates every rendered key and type and warns on stderr; renders with no warnings | 1 | Done |
 | E3 | `skills/lakehouse`: `query(sql, max_rows)` → DataFrame with `attrs` sql/row_count/truncated/elapsed_ms, `tables`, `describe`, `profile`, `partitions`, `snapshots`, `explain`, `show`, `evidence()` (statement log for E10); read-only guard and connection reused from `services.common.impala`; table names validated before interpolation; pandas display capped. prime-agent only enables a Python skill the kernel can import and the kernel venv is root-owned, so skill `src` dirs go on `PYTHONPATH` (`.env`; Workbench project env); `render_config` warns on any unimportable skill | `make test-impala` 7/7 against local Impala in the kernel's Python; real agent turn on Mistral Large called it and returned 2,000,000 | 4 | Done |
 | E4 | `skills/atlas`: `search(term)`, `entity(table)`, `lineage(table)`, `classifications(table)` over `services.common.metadata` (stub or Atlas REST, no branching in the skill); bare `table` names resolve to Atlas qualified names via search, so the cluster suffix never appears in agent code; unknown names raise `LookupError` with close matches; the private database is not resolvable. Both skills are async with blocking calls in a thread (prime-agent's `await <skill>` convention: a sync skill cost the model 10 tool calls to discover, async 4-7) and expose only their API in `dir()` | 7 tests pass on stub and fake Atlas REST; real Mistral Large turn returned the right classifications and lineage | 2 | Done |
-| E5 | Investigation prompt note (global): plan from metadata, delegate by partition or dimension, SQL plus row counts as evidence, concurrency cap, cite evidence in findings; **read a skill's SKILL.md before first use** (E4: Mistral Large guessed skill function names instead, costing 3-6 extra tool calls and ~30-60k tokens per run) | Note present in global harness state | 1 | Todo |
-| E6 | Subagent spec "partition investigator" in global harness state, used by the root when spawning | Spec present and referenced in a run | 1 | Todo |
+| E5 | Investigation method in `config/templates/investigation-note.md`, rendered by `render_config` to `$AGENT_WORKDIR/AGENTS.md` (prime-agent's project-context layer: the whole text reaches the system prompt). Content: exact skill API, plan from metadata, symptom then control-group comparisons, aggregate in SQL, delegate by date range or one dimension with the `MAX_CHILDREN`/depth caps, every number from a tool result, cite SQL and row counts, findings plus rejected explanations. Kept answer-neutral (a test rejects any mention of the planted cause or its dimension). Global harness gets a 136-char prompt note pointing at it, because the harness digest shows only the first 140 chars of each entry (pa-core v0.10.0) | Note present in global harness state; method in the system prompt from `AGENT_WORKDIR`; the E4 catalog question now takes 1 tool call and 18k input tokens (was 4-10 calls, 45-73k, and one wrong answer) | 1 | Done |
+| E6 | Subagent spec `partition-investigator` (`config/templates/partition-investigator.md`), seeded into global harness state by `render_config`; the root is pointed at it by the per-run task template (`config/templates/investigation-task.md`, sent by `scripts/run_investigation.py` / `make investigate`, the future F3 engine) rather than AGENTS.md, so children never see delegation rules. Spec fixes `model`/`thinking="off"`, half-open slices that cover the whole range with a sum check, `await` for every skill call (incl. `agent_message.send`), JSON result file, end-turn-after-spawn. Verified 2026-10-21 over ACP: root loaded the spec, spawned 2 Ministral 8B children that ran real SQL, wrote files and woke the root; findings in 100 s, root 6 tool calls (~104k tokens), children ~190-230k tokens each. Found and fixed in the spec: slice boundaries dropped one day (`<=` on a timestamp) | Spec present and referenced in a run | 1 | Done |
 | E7 | Headless smoke: `prime-agent -p` answers a single-table question through the lakehouse skill | Correct answer with SQL shown | 1 | Todo |
-| E8 | Recursive smoke: root on Mistral Large spawns three Ministral children by region, each runs SQL, root composes findings | Findings name the planted lot | 3 | Todo |
+| E8 | Recursive smoke on the real question: `make investigate Q="…" N=3` (ACP, daemon-backed; E6 proved the mechanics with 2 children). Root on `ROOT_MODEL` plans from metadata, spawns children on `CHILD_MODEL` through the `partition-investigator` spec, sliced by date range or one dimension of its choosing; each child runs SQL and writes its slice file; root writes `findings.md`. The question is symptom-only (a decline-rate rise in `payment_transactions`), with no dates, cause or dimension in it. Depends on E9 if Ministral children don't call tools | Findings name scenario `payment_routing_v1`'s cause and window and reject its decoys, scored against Meridian's private answer key on the Meridian side (expected answers stay out of this repo); every number traces to child or root SQL in `events.jsonl` | 3 | Todo |
 | E9 | Verify Magistral reasoning levels map through the Mistral provider; verify Ministral child tool calling through the Mistral provider | Both produce REPL tool calls. **Risk found in E3:** given a plain run-this-code prompt, `ministral-8b-latest` made no tool call and invented the output (twice); Mistral Large called the tool correctly. Check Ministral 14B/8B under the E6 spec; if it does not call tools reliably, children move to a larger model | 2 | Todo |
 | E10 | Findings output contract: root ends with a JSON block `{findings:[{claim, confidence, evidence:[{session, sql, rows, elapsed_ms}]}]}` | Parser test passes | 1 | Todo |
 
@@ -87,7 +88,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 |---|---|---|---|---|
 | F1 | FastMCP Streamable HTTP server, stateless JSON, routes `/mcp`, `/healthz`, `/`, bearer-token middleware | `curl /healthz` 200, `/mcp` 401 without token | 2 | Todo |
 | F2 | Job store (SQLite under `/home/cdsw/data`): `investigations`, `events`, `findings` | Schema migration on start | 2 | Todo |
-| F3 | Runner: spawn `prime-agent --mode rpc` per investigation, send prompt, stream stdout JSON events into the store, track child spawn and settle events | Events visible for a smoke run | 4 | Todo |
+| F3 | Runner: one daemon-backed session per investigation via `prime-agent --mode acp` (ACP JSON-RPC: `initialize`, `session/new` with `cwd=$AGENT_WORKDIR` so AGENTS.md loads, `session/prompt`; stream `session/update` events into the store). Not `--mode rpc`: verified 2026-10-21 that `-p`, `--mode json` and `--mode rpc` have no RLM child runtime, so no recursion. Track child spawn and settle events | Events visible for a smoke run | 4 | Todo |
 | F4 | Tools: `start_investigation(question, scope)`, `get_investigation(id)`, `get_findings(id)`, `ask_followup(id, question)`, `list_investigations()`, `cancel_investigation(id)` | Each tool has schema and docstring | 3 | Todo |
 | F5 | Findings extraction from the E10 contract into the `findings` table | Findings returned by `get_findings` | 1 | Todo |
 | F6 | Process supervision: timeouts, orphan cleanup, restart-safe status, stdin-close settles the turn | Kill test leaves no zombies | 2 | Todo |
@@ -143,13 +144,27 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | K4 | Two dry runs with timing; define live path and fallback path | Run sheet | 2 | Todo |
 | K5 | Hygiene: rotate bearer token and API keys, tear down the tunnel, remove unauthenticated access if not needed after the event | Done after demo | 0.5 | Todo |
 
+## L. FDE readiness (customer builds: nothing faked)
+
+The Evolve demo is recorded and edited; Forward Deployed Engineers will run this for real in
+customer environments. These items make it repeatable there. They follow the demo-critical
+items and must not put the 2026-10-27 recording at risk.
+
+| ID | Item | Done when | Est | Status |
+|---|---|---|---|---|
+| L1 | Budgets: per-investigation wall clock enforced by the runner/bridge with partial findings at the limit; per-child turn or token cap (check which prime-agent settings, e.g. `autonomous`, apply to spawned children); fan-out cap enforced, not just stated in AGENTS.md | A runaway run stops at its limit and still returns what it has | 3 | Todo |
+| L2 | Child model reliability: measure tool-call rate and correctness of Ministral 8B/14B vs larger models under the E6 spec; pick the child model on evidence (E9 found Ministral 8B inventing results) | Chosen child model calls tools and returns correct numbers in 5 of 5 runs | 2 | Todo |
+| L3 | Rate limits and cost: record tokens per minute and per agent from E8 runs; separate Mistral key or workspace for children if the 2M tokens/min budget is at risk | Peak tokens/min recorded; no 429s in 3 consecutive full runs | 1 | Todo |
+| L4 | Workbench end-to-end on the real Cloudera runtime image (local dev uses a native arm64 build, C8): render_config at app start (Workbench ignores the image ENTRYPOINT), PYTHONPATH and AGENT_WORKDIR as project env, daemon-backed ACP run, skills against CDW | `make investigate`-equivalent run completes on Workbench | 2 | Todo |
+| L5 | Customer portability: method, skills and spec stay customer-neutral; engagement specifics only in task templates; a short FDE runbook (setup, data load, schema, run, troubleshoot) | An FDE not on this project completes a run from the runbook | 2 | Todo |
+
 ## Totals
 
 | Epic | Items | Est hours |
 |---|---|---|
 | A Repo and contract | 5 | 7 |
 | B Runtime image | 6 | 7 |
-| C Local stack | 7 | 10 |
+| C Local stack | 8 | 12 |
 | D Data | 7 | 12 |
 | E Prime Agent config and skills | 10 | 17 |
 | F MCP bridge | 7 | 15 |
@@ -158,7 +173,8 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | I Workbench deployment | 5 | 5 |
 | J Governance evidence | 5 | 5 |
 | K Demo prep | 5 | 6.5 |
-| Total | 67 | 97.5 |
+| L FDE readiness | 5 | 10 |
+| Total | 73 | 109.5 |
 
 ## Suggested order
 

@@ -8,13 +8,17 @@ PY := python3
 # Meridian (separate repo) generates the data; see its config/demo.yaml.
 MERIDIAN_PUBLIC_DIR ?= ../meridian/data/demo-public
 
-.PHONY: test-impala help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
+.PHONY: investigate image-local test-impala help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
 
 env: ## Create .env from .env.example if missing
 	@test -f .env || (cp .env.example .env && echo "created .env; edit MISTRAL_API_KEY")
+
+image-local: ## Apple Silicon: native arm64 runtime on a python:3.11-slim base (local only, see image/Dockerfile)
+	docker build --platform linux/arm64 --build-arg CLOUDERA_RUNTIME=python:3.11-slim-bookworm \
+	  -t prime-agent-runtime:0.10.0-local-arm64 -f image/Dockerfile image
 
 image: ## Build the runtime image (amd64)
 	docker build --platform linux/amd64 -t $(IMAGE) -f image/Dockerfile image
@@ -34,10 +38,13 @@ logs: ## Tail local stack logs
 
 data: ## Stage a Meridian public run (MERIDIAN_PUBLIC_DIR) and load it into Iceberg; REPLACE=1 swaps out a loaded run
 	$(PY) data/stage.py --source $(MERIDIAN_PUBLIC_DIR)
-	$(COMPOSE) exec -T bridge bash -lc 'python -u /home/cdsw/data/load.py $(if $(REPLACE),--replace,)'
+	$(COMPOSE) exec -T bridge bash -lc '$$PRIME_AGENT_KERNEL_PYTHON -u /home/cdsw/data/load.py $(if $(REPLACE),--replace,)'
+
+investigate: ## Run one investigation over ACP: make investigate Q="question" [N=children]
+	$(COMPOSE) exec -T -e "Q=$(Q)" bridge bash -lc '$$PRIME_AGENT_KERNEL_PYTHON -u /home/cdsw/scripts/run_investigation.py --question "$$Q" --children $(or $(N),2)'
 
 validate-data: ## Bankwide SQL checks of the loaded data; writes docs/data-validation.md and a chart
-	$(COMPOSE) exec -T bridge bash -lc 'python -u /home/cdsw/scripts/validate_bankwide.py'
+	$(COMPOSE) exec -T bridge bash -lc '$$PRIME_AGENT_KERNEL_PYTHON -u /home/cdsw/scripts/validate_bankwide.py'
 
 smoke: ## Connectivity, Iceberg DDL probe, and a Prime Agent run if MISTRAL_API_KEY is set
 	$(COMPOSE) exec bridge bash -lc '/home/cdsw/scripts/smoke.sh'

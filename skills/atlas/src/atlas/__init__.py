@@ -57,7 +57,7 @@ def _qualified(table: str) -> str:
     raise LookupError(f"no catalog entry for {table!r}" + (f"; closest: {close}" if close else ""))
 
 
-async def search(term: str, limit: int = 20) -> _pd.DataFrame:
+async def search(term: str, *, limit: int = 20) -> _pd.DataFrame:
     """Tables whose name, description or columns contain ``term``.
 
     Returns a DataFrame: qualified_name, name, owner, classifications (list), description.
@@ -86,12 +86,15 @@ async def entity(table: str) -> dict:
     return out
 
 
-async def lineage(table: str, depth: int = 3) -> dict:
+async def lineage(table: str, *, depth: int = 3) -> dict:
     """Inputs, outputs and the edges between them for one table.
 
     Returns {"qualified_name": str, "inputs": [qualified name str], "outputs": [qualified name str],
      "processes": [{"from": str, "to": str, ...}]}. Inputs and outputs are plain strings.
     """
+    if isinstance(depth, bool) or not isinstance(depth, int):
+        raise TypeError(f"depth must be an int (hops to follow), got {depth!r}; "
+                        "lineage() always returns both inputs and outputs")
     qn = await _asyncio.to_thread(_qualified, table)
     found = await _asyncio.to_thread(_catalog().lineage, qn, depth)
     if found is None:

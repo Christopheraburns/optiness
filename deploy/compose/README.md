@@ -29,5 +29,5 @@ The emulated impalad is fragile on writes. Multithreaded (`mt_dop`) or LLVM-code
 partitioned inserts can wedge it: either every thrift server dies with "Interrupted
 system call", or a fragment stops with 0% CPU. `data/load.py` therefore writes with
 `MT_DOP=0` and `DISABLE_CODEGEN=true` on the local stack, a 180 s time limit, and
-retries. If impalad still wedges, `docker restart primeagent-impalad-1` and re-run
+retries. If impalad still wedges, `docker restart optiness-impalad-1` and re-run
 `make data`; it resumes where it stopped. Agent reads use the default options.

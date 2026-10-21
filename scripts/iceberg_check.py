@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from services.common.impala import connect  # noqa: E402
 
-DB = "primeagent_check"
+DB = "optiness_check"
 TBL = f"{DB}.iceberg_probe"
 
 

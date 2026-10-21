@@ -1,4 +1,4 @@
-# Prime Agent on Cloudera AI Workbench for Mistral Studio
+# Optiness: Prime Agent on Cloudera AI Workbench for Mistral Studio
 
 Working plan for the Evolve NY main-stage demo (October 27, 2026).
 Written 2026-10-20. Source material: PrimeAgent.pdf (Karten et al., arXiv 2608.23552)
@@ -81,7 +81,8 @@ Mistral Studio Agent (Mistral Large / Magistral)
   -> Connector (HTTPS, bearer header)
   -> Workbench Application "prime-agent-mcp" (FastMCP, Streamable HTTP, /mcp)
        tools: start_investigation, get_investigation, get_findings, ask_followup, list_investigations
-       backend: one `prime-agent --mode rpc` process per investigation, events persisted
+       backend: one daemon-backed `prime-agent --mode acp` session per investigation, events persisted
+       (`--mode rpc`/`json`/`-p` have no RLM child runtime, so they cannot recurse; verified 2026-10-21)
   -> Prime Agent root session (Mistral Large) with skills: lakehouse, atlas, investigation
        -> rlm.spawn children (Ministral via the Mistral API)
        -> each child runs Impala SQL through impyla (Ranger enforced) over Iceberg tables

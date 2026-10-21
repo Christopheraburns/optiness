@@ -21,7 +21,7 @@ daily = await lakehouse.query("""
            AVG(CASE WHEN approved THEN 0 ELSE 1 END) AS decline_rate
     FROM payment_transactions GROUP BY 1 ORDER BY 1""")
 print(daily.attrs["row_count"], daily.attrs["elapsed_ms"])
-await lakehouse.show(daily, 10)                         # capped print
+await lakehouse.show(daily, n=10)                         # capped print
 
 parts = await lakehouse.partitions("payment_transactions")  # Iceberg daily partitions
 snaps = await lakehouse.snapshots("payment_transactions")   # commit history
@@ -30,7 +30,7 @@ plan = await lakehouse.explain("SELECT COUNT(*) FROM payment_transactions")
 
 ## API
 
-- `query(sql, max_rows=None)`: run one read-only statement and return a DataFrame
+- `query(sql, *, max_rows=None)`: run one read-only statement and return a DataFrame
   of at most `max_rows` rows (default `IMPALA_MAX_ROWS`, 5000). `df.attrs` holds
   `sql`, `row_count`, `truncated` and `elapsed_ms`. If `truncated` is True,
   aggregate in SQL instead of raising the cap.
@@ -41,7 +41,7 @@ plan = await lakehouse.explain("SELECT COUNT(*) FROM payment_transactions")
 - `partitions(table)`, `snapshots(table)`: Iceberg metadata tables. Use
   partitions to plan work by day; snapshots show when data was committed.
 - `explain(sql)`: the Impala plan as text, without running the query.
-- `show(df, n=20)`: print the first `n` rows.
+- `show(df, *, n=20)`: print the first `n` rows.
 - `evidence()`: every statement this kernel ran, as a DataFrame of `sql`,
   `rows`, `truncated`, `elapsed_ms`. Cite these rows in findings.
 

@@ -92,7 +92,7 @@ class Loader:
             except Exception as e:  # noqa: BLE001 - a time-limited hang surfaces as a query error
                 if attempt == attempts:
                     raise SystemExit(f"[load] {label} failed {attempts} times ({e}). If impalad is wedged, "
-                                     "restart it (docker restart primeagent-impalad-1) and re-run make data; "
+                                     "restart it (docker restart optiness-impalad-1) and re-run make data; "
                                      "loading resumes where it stopped")
                 print(f"[load] {label} attempt {attempt} failed: {str(e)[:120]}; retrying")
 

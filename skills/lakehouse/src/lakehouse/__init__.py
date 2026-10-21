@@ -62,7 +62,7 @@ def _table(name: str) -> str:
     return ".".join(parts) if len(parts) == 2 else f"{_settings().impala.database}.{parts[0]}"
 
 
-async def query(sql: str, max_rows: int | None = None) -> _pd.DataFrame:
+async def query(sql: str, *, max_rows: int | None = None) -> _pd.DataFrame:
     """Run one read-only statement; return at most ``max_rows`` rows as a DataFrame.
 
     ``df.attrs``: ``sql``, ``row_count``, ``truncated``, ``elapsed_ms``.
@@ -118,7 +118,7 @@ async def explain(sql: str) -> str:
     return "\n".join(str(v) for v in df.iloc[:, 0])
 
 
-async def show(df: _pd.DataFrame, n: int = 20) -> None:
+async def show(df: _pd.DataFrame, *, n: int = 20) -> None:
     """Print the first ``n`` rows and how many were left out."""
     print(df.head(n).to_string())
     if len(df) > n:
