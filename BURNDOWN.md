@@ -63,7 +63,8 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | D3 | Generator: Meridian (separate repo), profile `config/demo.yaml`: 2M rows, 2026-08-04 to 2026-10-17, so the incident and recovery are in the past on demo day. Run `scripts/validate_scenario.py --generate --require-m2` → `data/demo-public` + `data/demo-private`. The 50M profile is D6 | 2M run passes every M2 acceptance check, in under 10 min | 3 | Done |
 | D4 | Loader `data/load.py`: bind-mount Meridian `data/demo-public` **read-only** into `impalad`/`catalogd` (never `demo-private`, never into `bridge`). Create external Parquet tables in a `staging` database, then `INSERT … SELECT` into the `meridian_financial` Iceberg tables, dimensions first, `payment_transactions` last. Load ground truth as admin only if J1 needs it. Same SQL on CDW from cloud storage. Update `make data` (still points at `data/generate.py`) | Per-table row counts match `public_manifest.json`; one `generation_runs` row, `run_status = complete` | 2 | Todo |
 | D5 | Validation via SQL only, no agent: daily decline rate shows a ~2 pp bankwide lift from 09-11 and recovery after 10-03; a segment query isolates the planted processor/version/segment; numbers reconcile with Meridian's private evaluator. Only bankwide charts go in `docs/`; the segment answer stays out of this repo | Bankwide charts in `docs/`; reconciliation noted on the Meridian side | 1 | Todo |
-| D6 | Run at 50M on CDW; record row counts, partition counts, table sizes | Numbers in `docs/dataset.md` | 2 | Todo |
+| D6 | Run at 50M on CDW with Meridian `config/demo-50m.yaml` (needs D7; the Meridian job API refuses 50M, so use the CLI); record row counts, partition counts, table sizes | Numbers in `docs/dataset.md` | 2 | Todo |
+| D7 | 50M readiness: Meridian `config/demo-50m.yaml` (same calendar and scenario as D3; 500k customers, 20k merchants, 80k terminals, 100k-row files) and a 5M timing run with those dimensions. Result: 5M passed M2 acceptance in 349 s, peak RSS 1.65 GB, 163 MB Parquet. Memory is flat in row count but scales with batch size (500k-row batches peaked at 4.8 GB), so keep 100k. Estimate for 50M: ~60 min on one core, ~1.7 GB RAM, ~1.6 GB Parquet | 5M passes M2 acceptance; time and memory recorded here | 1 | Done |
 
 ## E. Prime Agent configuration, skills, harness state
 
@@ -149,7 +150,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | A Repo and contract | 5 | 7 |
 | B Runtime image | 6 | 7 |
 | C Local stack | 7 | 10 |
-| D Data | 6 | 11 |
+| D Data | 7 | 12 |
 | E Prime Agent config and skills | 10 | 17 |
 | F MCP bridge | 7 | 15 |
 | G Mistral Studio | 6 | 5 |
@@ -157,7 +158,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | I Workbench deployment | 5 | 5 |
 | J Governance evidence | 5 | 5 |
 | K Demo prep | 5 | 6.5 |
-| Total | 66 | 96.5 |
+| Total | 67 | 97.5 |
 
 ## Suggested order
 
