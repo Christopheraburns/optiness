@@ -46,23 +46,23 @@ Only values differ. Nothing is edited to move from Local to CAI.
 
 | ID | Item | Done when | Est | Status |
 |---|---|---|---|---|
-| C1 | docker-compose: Impala quickstart (HMS, statestored, catalogd, impalad) with persistent volume | `impala-shell -q "select 1"` works | 2 | Todo |
-| C2 | Verify Iceberg v2 DDL on the local Impala version (CREATE TABLE ... STORED AS ICEBERG, partition transforms, metadata tables) | Test table created and queried | 1 | Todo |
-| C3 | Metadata backend switch: `stub` reads a JSON catalog file; `atlas` uses REST. Optional Atlas container documented but not required | Both backends pass the same unit test | 2 | Todo |
-| C4 | Ollama or vLLM container serving Ministral with OpenAI-compatible API and tool calling enabled | `curl /v1/chat/completions` returns a tool call | 2 | Todo |
-| C5 | cloudflared (or ngrok) compose service exposing the bridge over public HTTPS for Studio during development | Public URL answers `/healthz` | 1 | Todo |
-| C6 | Compose services for bridge and console using the runtime image, `.env`, `/home/cdsw` volume | `make up` brings everything green | 1 | Todo |
-| C7 | Local smoke: Prime Agent in container queries local Impala via the lakehouse skill | `make smoke` passes | 1 | Todo |
+| C1 | docker-compose: Impala quickstart (HMS, statestored, catalogd, impalad) with persistent volume | `impala-shell -q "select 1"` works | 2 | Done |
+| C2 | Verify Iceberg v2 DDL on the local Impala version (CREATE TABLE ... STORED AS ICEBERG, partition transforms, metadata tables) | Test table created and queried | 1 | Done |
+| C3 | Metadata backend switch: `stub` reads a JSON catalog file; `atlas` uses REST. Optional Atlas container documented but not required | Both backends pass the same unit test | 2 | Done |
+| C4 | Ollama or vLLM container serving Ministral with OpenAI-compatible API and tool calling enabled | `curl /v1/chat/completions` returns a tool call | 2 | Done |
+| C5 | cloudflared (or ngrok) compose service exposing the bridge over public HTTPS for Studio during development. Written and validated; run `make tunnel` when ready to publish | Public URL answers `/healthz` | 1 | Doing |
+| C6 | Compose services for bridge and console using the runtime image, `.env`, `/home/cdsw` volume | `make up` brings everything green | 1 | Done |
+| C7 | Local smoke: Prime Agent in container queries local Impala via the lakehouse skill | `make smoke` passes | 1 | Done |
 
 ## D. Data
 
 | ID | Item | Done when | Est | Status |
 |---|---|---|---|---|
-| D1 | Schema: `transactions`, `returns`, `products`, `stores`, `suppliers`, `shipment_lots`; Iceberg DDL partitioned by day and region | DDL file applies on Local and CDW | 2 | Todo |
-| D2 | Root-cause spec: one supplier lot, one SKU family, one region, after a cutoff date, plus a decoy (a promo-driven spike that is not defective) | Written spec with expected numbers | 1 | Todo |
-| D3 | Generator: chunked PyArrow parquet writer, deterministic seed, `DATA_SCALE` rows, embeds the spec | Runs at 2M locally in under 10 min | 3 | Todo |
-| D4 | Loader: parquet staging then Impala CTAS/INSERT into Iceberg tables; same SQL both places | Row counts match generator | 2 | Todo |
-| D5 | Validation notebook: baseline return rate, weekly trend, spike visible, root cause recoverable by SQL | Charts saved to `docs/` | 1 | Todo |
+| D1 | Schema: Meridian's contract DDL vendored in `schema/`: `meridian_financial` (10 public tables, `payment_transactions` partitioned by `DAYS(transaction_ts)`) and `meridian_ground_truth` (2 private tables). Applied by `make schema`; never altered by us. `config/atlas-stub.json` is generated from the public DDL | `SHOW TABLES` lists all 12 on Local; DDL applies on CDW | 2 | Doing |
+| D2 | Root-cause spec: Meridian scenario `payment_routing_v1`. Routing config 4.12 on processor 3 (2-day 20% canary, then 80% with a 20% holdback) over-declines cross-border Mastercard ecommerce MCC 4722 (travel), 2026-09-11 to 2026-10-02; 4.13 restores it. Decoys: a 12-hour degradation on another processor, fraud-score declines, a routine 4.10→4.11 deploy on other processors, weekend dips. Spec and expected numbers live in the Meridian repo (`docs/m2_scenario_quality.md`, private `scenario_quality.json`), **never in this repo**: it is mounted at `/home/cdsw`, where the agent's Python runs | Expected numbers recorded on the Meridian side | 1 | Done |
+| D3 | Generator: Meridian (separate repo), profile `config/demo.yaml`: 2M rows, 2026-08-04 to 2026-10-17, so the incident and recovery are in the past on demo day. Run `scripts/validate_scenario.py --generate --require-m2` → `data/demo-public` + `data/demo-private`. The 50M profile is D6 | 2M run passes every M2 acceptance check, in under 10 min | 3 | Done |
+| D4 | Loader `data/load.py`: bind-mount Meridian `data/demo-public` **read-only** into `impalad`/`catalogd` (never `demo-private`, never into `bridge`). Create external Parquet tables in a `staging` database, then `INSERT … SELECT` into the `meridian_financial` Iceberg tables, dimensions first, `payment_transactions` last. Load ground truth as admin only if J1 needs it. Same SQL on CDW from cloud storage. Update `make data` (still points at `data/generate.py`) | Per-table row counts match `public_manifest.json`; one `generation_runs` row, `run_status = complete` | 2 | Todo |
+| D5 | Validation via SQL only, no agent: daily decline rate shows a ~2 pp bankwide lift from 09-11 and recovery after 10-03; a segment query isolates the planted processor/version/segment; numbers reconcile with Meridian's private evaluator. Only bankwide charts go in `docs/`; the segment answer stays out of this repo | Bankwide charts in `docs/`; reconciliation noted on the Meridian side | 1 | Todo |
 | D6 | Run at 50M on CDW; record row counts, partition counts, table sizes | Numbers in `docs/dataset.md` | 2 | Todo |
 
 ## E. Prime Agent configuration, skills, harness state

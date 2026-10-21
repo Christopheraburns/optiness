@@ -11,3 +11,8 @@ image/pa.tar.gz
 *.sqlite
 *.sqlite3
 .DS_Store
+
+# runtime state written into the bind-mounted project (mirrors Workbench)
+.prime/
+data/bridge/
+.cache/

@@ -43,15 +43,18 @@ def assert_read_only(sql: str) -> str:
     return body
 
 
-def connect(cfg: ImpalaSettings | None = None):
-    """Open an impyla DB-API connection from the env contract."""
+def connect(cfg: ImpalaSettings | None = None, *, database: str | None = None):
+    """Open an impyla DB-API connection from the env contract.
+
+    ``database`` overrides IMPALA_DATABASE for callers that must work before
+    the demo database exists (smoke tests, the loader)."""
     from impala.dbapi import connect as _connect  # imported lazily: skills load fast
 
     cfg = cfg or settings().impala
     kwargs: dict[str, Any] = {
         "host": cfg.host,
         "port": cfg.port,
-        "database": cfg.database,
+        "database": database or cfg.database,
         "auth_mechanism": cfg.auth_mechanism,
         "use_ssl": cfg.use_ssl,
         "timeout": cfg.query_timeout_s,
@@ -83,8 +86,8 @@ class QueryResult:
 
 
 @contextmanager
-def cursor(cfg: ImpalaSettings | None = None) -> Iterator[Any]:
-    conn = connect(cfg)
+def cursor(cfg: ImpalaSettings | None = None, *, database: str | None = None) -> Iterator[Any]:
+    conn = connect(cfg, database=database)
     try:
         cur = conn.cursor()
         try:
@@ -95,13 +98,15 @@ def cursor(cfg: ImpalaSettings | None = None) -> Iterator[Any]:
         conn.close()
 
 
-def run_query(sql: str, *, max_rows: int | None = None, cfg: ImpalaSettings | None = None) -> QueryResult:
+def run_query(
+    sql: str, *, max_rows: int | None = None, cfg: ImpalaSettings | None = None, database: str | None = None
+) -> QueryResult:
     """Execute one read-only statement and fetch at most ``max_rows`` rows."""
     cfg = cfg or settings().impala
     body = assert_read_only(sql)
     limit = max_rows if max_rows is not None else cfg.max_rows
     started = time.perf_counter()
-    with cursor(cfg) as cur:
+    with cursor(cfg, database=database) as cur:
         cur.execute(body)
         columns = [d[0] for d in (cur.description or [])]
         rows = cur.fetchmany(limit + 1) if columns else []

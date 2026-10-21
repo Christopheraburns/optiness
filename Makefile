@@ -2,10 +2,11 @@
 # Every target works from a fresh clone with a filled-in .env.
 SHELL := /bin/bash
 IMAGE ?= christopheraburns/prime-agent-runtime:0.10.0
-COMPOSE := docker compose --env-file .env -f deploy/compose/docker-compose.yml
+PROFILES ?=
+COMPOSE := docker compose --env-file .env -f deploy/compose/docker-compose.yml $(foreach p,$(PROFILES),--profile $(p))
 PY := python3
 
-.PHONY: help env up down logs render data smoke deploy-cml screens image
+.PHONY: help env up down logs render data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -19,12 +20,12 @@ image: ## Build the runtime image (amd64)
 render: env ## Render models.json and settings.json from .env into the agent dir
 	set -a && source .env && set +a && $(PY) scripts/render_config.py
 
-up: env ## Start the local stack (Impala quickstart, bridge, console)
-	@test -f deploy/compose/docker-compose.yml || (echo "deploy/compose/docker-compose.yml not written yet (BURNDOWN C1)"; exit 1)
-	$(COMPOSE) up -d --build
+up: env ## Start the local stack (Impala quickstart, bridge, console); add PROFILES=ollama
+	$(COMPOSE) up -d
+	@echo "bridge  http://localhost:18080/   console http://localhost:18090/   impala UI http://localhost:25000/"
 
-down: ## Stop the local stack
-	-$(COMPOSE) down
+down: ## Stop the local stack; V=1 also deletes the warehouse volume
+	-$(COMPOSE) --profile ollama --profile tunnel --profile tools down $(if $(V),-v,)
 
 logs: ## Tail local stack logs
 	$(COMPOSE) logs -f --tail=100
@@ -33,9 +34,26 @@ data: ## Generate and load DATA_SCALE rows into Iceberg via Impala
 	@test -f data/generate.py || (echo "data/generate.py not written yet (BURNDOWN D3)"; exit 1)
 	$(COMPOSE) exec bridge bash -lc 'python /home/cdsw/data/generate.py && python /home/cdsw/data/load.py'
 
-smoke: ## Headless Prime Agent answers one lakehouse question
-	@test -f scripts/smoke.sh || (echo "scripts/smoke.sh not written yet (BURNDOWN C7/E7)"; exit 1)
+smoke: ## Connectivity, Iceberg DDL probe, and a Prime Agent run if MISTRAL_API_KEY is set
 	$(COMPOSE) exec bridge bash -lc '/home/cdsw/scripts/smoke.sh'
+
+shell: ## Shell inside the bridge container (same image as Workbench)
+	$(COMPOSE) exec bridge bash
+
+schema: ## Apply schema/*.sql to the local Impala (production tables, then ground truth)
+	$(COMPOSE) --profile tools run --rm -T impala-shell -q "CREATE DATABASE IF NOT EXISTS meridian_financial"
+	$(COMPOSE) --profile tools run --rm -T -v "$(CURDIR)/schema:/schema:ro" impala-shell -f /schema/meridian_financial_iceberg.sql
+	$(COMPOSE) --profile tools run --rm -T -v "$(CURDIR)/schema:/schema:ro" impala-shell -f /schema/meridian_financial_private_iceberg.sql
+
+impala-shell: ## Interactive impala-shell against the local quickstart
+	$(COMPOSE) --profile tools run --rm impala-shell
+
+tunnel: ## Start the cloudflared tunnel and print its public URL
+	$(COMPOSE) --profile tunnel up -d tunnel
+	@sleep 6; $(COMPOSE) --profile tunnel logs tunnel 2>&1 | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1 || echo "see: make logs"
+
+test: ## Unit tests (metadata backends)
+	$(PY) -m pytest -q tests
 
 deploy-cml: ## Create or update the Workbench applications with cmlapi
 	@test -f deploy/cml/deploy.py || (echo "deploy/cml/deploy.py not written yet (BURNDOWN I3)"; exit 1)

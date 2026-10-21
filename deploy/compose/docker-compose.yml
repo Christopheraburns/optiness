@@ -1,0 +1,233 @@
+# Local stack for Docker Desktop. Mirrors what Cloudera AI Workbench provides:
+#   impalad                -> Cloudera Data Warehouse (Impala)
+#   bridge, console        -> Workbench Applications on the same runtime image
+#   ollama  (profile)      -> Cloudera AI Inference stand-in (OpenAI-compatible)
+#   tunnel  (profile)      -> the Workbench application public URL
+#
+# The Impala services are the Apache Impala quickstart (amd64 only; Apple
+# Silicon runs them under emulation). The warehouse lives in a named volume,
+# so data survives `docker compose down` and is removed by `down -v`.
+#
+# Usage from the repo root:
+#   make up                 # impala + bridge + console
+#   make up PROFILES=ollama # also the local child-model server
+#   make tunnel             # expose the bridge for a Mistral Studio connector
+
+name: primeagent
+
+x-impala-conf: &impala-conf
+  - ./quickstart_conf:/opt/impala/conf:ro
+
+x-runtime-app: &runtime-app
+  image: ${RUNTIME_IMAGE:-christopheraburns/prime-agent-runtime:0.10.0}
+  platform: linux/amd64
+  env_file:
+    - ../../.env
+  volumes:
+    # Workbench mounts the project at /home/cdsw; we bind-mount the repo there.
+    - ../..:/home/cdsw
+  working_dir: /home/cdsw
+  restart: unless-stopped
+
+services:
+  # ------------------------------------------------------------------ Impala
+  # One-shot: the warehouse volume is created root-owned, but the metastore
+  # (uid 1000 hive) and Impala (uid 1000 impala) must write table data there.
+  warehouse-init:
+    image: busybox:1.37
+    command: ["sh", "-c", "mkdir -p /user/hive/warehouse/managed /user/hive/warehouse/external && chown -R 1000:1000 /user/hive/warehouse /var/lib/hive && echo warehouse-ready"]
+    volumes:
+      - impala-quickstart-warehouse:/user/hive/warehouse
+      - impala-quickstart-hms:/var/lib/hive
+    restart: "no"
+
+  hms:
+    image: ${IMPALA_QUICKSTART_IMAGE_PREFIX:-apache/impala:4.5.3-}impala_quickstart_hms
+    platform: linux/amd64
+    # hive-site.xml addresses the metastore by this hostname.
+    container_name: quickstart-hive-metastore
+    hostname: quickstart-hive-metastore
+    depends_on:
+      warehouse-init:
+        condition: service_completed_successfully
+    command: ["hms"]
+    volumes:
+      - impala-quickstart-hms:/var/lib/hive
+      - impala-quickstart-warehouse:/user/hive/warehouse
+      - ./quickstart_conf:/opt/hive/conf:ro
+    restart: unless-stopped
+
+  # Native (arm64-friendly) sidecar that becomes healthy once the metastore
+  # answers on 9083. Emulated JVM containers get no exec-based healthchecks:
+  # under Rosetta a healthcheck exec during Derby init wedged the metastore.
+  wait-hms:
+    image: busybox:1.37
+    depends_on:
+      - hms
+    command: ["sh", "-c", "while ! nc -z -w 2 quickstart-hive-metastore 9083; do sleep 3; done; echo hms-ready; sleep infinity"]
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z -w 2 quickstart-hive-metastore 9083"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+      start_period: 20s
+    restart: unless-stopped
+
+  statestored:
+    image: ${IMPALA_QUICKSTART_IMAGE_PREFIX:-apache/impala:4.5.3-}statestored
+    platform: linux/amd64
+    depends_on:
+      wait-hms:
+        condition: service_healthy
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1"]
+    volumes: *impala-conf
+    ports:
+      - "127.0.0.1:25010:25010"
+    restart: unless-stopped
+
+  catalogd:
+    image: ${IMPALA_QUICKSTART_IMAGE_PREFIX:-apache/impala:4.5.3-}catalogd
+    platform: linux/amd64
+    depends_on:
+      statestored:
+        condition: service_started
+      wait-hms:
+        condition: service_healthy
+    command: ["-redirect_stdout_stderr=false", "-logtostderr", "-v=1",
+              "-hms_event_polling_interval_s=1", "-invalidate_tables_timeout_s=999999"]
+    volumes:
+      - impala-quickstart-warehouse:/user/hive/warehouse
+      - ./quickstart_conf:/opt/impala/conf:ro
+    ports:
+      - "127.0.0.1:25020:25020"
+    restart: unless-stopped
+
+  impalad:
+    image: ${IMPALA_QUICKSTART_IMAGE_PREFIX:-apache/impala:4.5.3-}impalad_coord_exec
+    platform: linux/amd64
+    depends_on:
+      - statestored
+      - catalogd
+    command: ["-v=1", "-redirect_stdout_stderr=false", "-logtostderr",
+              "-mt_dop_auto_fallback=true",
+              "-default_query_options=mt_dop=4,default_file_format=parquet,default_transactional_type=insert_only",
+              "-mem_limit=${IMPALA_MEM_LIMIT:-4gb}"]
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx1g
+    volumes:
+      - impala-quickstart-warehouse:/user/hive/warehouse
+      - ./quickstart_conf:/opt/impala/conf:ro
+    ports:
+      - "127.0.0.1:21050:21050"   # HiveServer2 (impyla, impala-shell --protocol=hs2)
+      - "127.0.0.1:28000:28000"   # HiveServer2 over HTTP (what CDW uses)
+      - "127.0.0.1:25000:25000"   # web UI: queries, profiles
+    restart: unless-stopped
+
+  wait-impala:
+    image: busybox:1.37
+    depends_on:
+      - impalad
+    command: ["sh", "-c", "while ! nc -z -w 2 impalad 21050; do sleep 3; done; echo impala-ready; sleep infinity"]
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z -w 2 impalad 21050"]
+      interval: 5s
+      timeout: 3s
+      retries: 120
+      start_period: 30s
+    restart: unless-stopped
+
+  # One-shot impala-shell: `docker compose run --rm impala-shell -q "show databases"`
+  impala-shell:
+    image: ${IMPALA_QUICKSTART_IMAGE_PREFIX:-apache/impala:4.5.3-}impala_quickstart_client
+    platform: linux/amd64
+    profiles: ["tools"]
+    depends_on:
+      wait-impala:
+        condition: service_healthy
+    entrypoint: ["impala-shell", "--protocol=hs2", "-i", "impalad:21050"]
+
+  # ------------------------------------------------------- Workbench apps
+  bridge:
+    <<: *runtime-app
+    container_name: primeagent-bridge
+    environment:
+      - CDSW_APP_PORT=8080
+      - BIND_HOST=0.0.0.0
+    command: ["python", "services/bridge/app.py"]
+    ports:
+      - "127.0.0.1:${BRIDGE_PORT:-18080}:8080"
+    depends_on:
+      wait-impala:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  console:
+    <<: *runtime-app
+    container_name: primeagent-console
+    environment:
+      - CDSW_APP_PORT=8090
+      - BIND_HOST=0.0.0.0
+    command: ["python", "services/console/app.py"]
+    ports:
+      - "127.0.0.1:${CONSOLE_PORT:-18090}:8090"
+    depends_on:
+      - bridge
+
+  # ------------------------------------- Cloudera AI Inference stand-in
+  ollama:
+    image: ollama/ollama:${OLLAMA_VERSION:-latest}
+    profiles: ["ollama"]
+    container_name: primeagent-ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    restart: unless-stopped
+
+  ollama-pull:
+    image: ollama/ollama:${OLLAMA_VERSION:-latest}
+    profiles: ["ollama"]
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    # Retry: the server needs a moment before it serves /api, and a pull that
+    # starts too early fails with "pull model manifest: file does not exist".
+    command: ["for i in $$(seq 1 30); do ollama pull ${OLLAMA_MODEL:-ministral-3:3b} && exit 0; echo retry $$i; sleep 10; done; exit 1"]
+    restart: "no"
+
+  # -------------------------- public URL for the Mistral Studio connector
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    container_name: primeagent-tunnel
+    depends_on:
+      - bridge
+    # With a token: a named tunnel you configured in Cloudflare Zero Trust.
+    # Without: a quick tunnel; the random *.trycloudflare.com URL is in the logs.
+    command: >
+      sh -c 'if [ -n "$$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+               cloudflared tunnel --no-autoupdate run --token "$$CLOUDFLARE_TUNNEL_TOKEN";
+             else
+               cloudflared tunnel --no-autoupdate --url http://bridge:8080;
+             fi'
+    env_file:
+      - ../../.env
+    restart: unless-stopped
+
+volumes:
+  impala-quickstart-hms:
+  impala-quickstart-warehouse:
+  ollama-models:
+
+# The network name must not contain an underscore: the Hive metastore client
+# builds thrift://<host>.<network>:9083 and Java's URI parser rejects
+# underscores in hostnames (the upstream quickstart uses quickstart-network).
+networks:
+  default:
+    name: primeagent-net

@@ -1,4 +1,792 @@
 {
-  "_comment": "Local stand-in for Apache Atlas. METADATA_BACKEND=stub reads this; METADATA_BACKEND=atlas ignores it. Populated for real by data/ddl.sql tables.",
-  "entities": {}
+  "_comment": "Local stand-in for Apache Atlas (METADATA_BACKEND=stub). Mirrors the meridian_financial Iceberg tables in schema/meridian_financial_iceberg.sql (columns generated from that DDL). meridian_ground_truth is deliberately absent: the investigator must not discover it. Qualified names follow Atlas's db.table@cluster form.",
+  "entities": {
+    "meridian_financial.payment_transactions@local": {
+      "guid": "t-payment-transactions",
+      "typeName": "impala_table",
+      "name": "payment_transactions",
+      "owner": "payments_data_eng",
+      "description": "One row per card authorization attempt (original attempts only; retry_attempt is always 0). Iceberg v2, partitioned by DAYS(transaction_ts). approved/response_code give the outcome; routing_rule_id and processor_id record how the attempt was routed.",
+      "classifications": [
+        "Finance",
+        "PCI_Scope"
+      ],
+      "columns": [
+        {
+          "name": "transaction_id",
+          "type": "bigint"
+        },
+        {
+          "name": "transaction_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "customer_id",
+          "type": "bigint"
+        },
+        {
+          "name": "merchant_id",
+          "type": "bigint"
+        },
+        {
+          "name": "terminal_id",
+          "type": "bigint"
+        },
+        {
+          "name": "processor_id",
+          "type": "int"
+        },
+        {
+          "name": "routing_rule_id",
+          "type": "bigint"
+        },
+        {
+          "name": "amount_original",
+          "type": "decimal(18,2)"
+        },
+        {
+          "name": "original_currency",
+          "type": "string"
+        },
+        {
+          "name": "fx_rate_to_usd",
+          "type": "decimal(18,8)"
+        },
+        {
+          "name": "amount_usd",
+          "type": "decimal(18,2)"
+        },
+        {
+          "name": "card_network",
+          "type": "string"
+        },
+        {
+          "name": "card_product",
+          "type": "string"
+        },
+        {
+          "name": "payment_method",
+          "type": "string"
+        },
+        {
+          "name": "channel",
+          "type": "string"
+        },
+        {
+          "name": "card_present",
+          "type": "boolean"
+        },
+        {
+          "name": "transaction_country",
+          "type": "string"
+        },
+        {
+          "name": "issuing_country",
+          "type": "string"
+        },
+        {
+          "name": "cross_border",
+          "type": "boolean"
+        },
+        {
+          "name": "currency_conversion_required",
+          "type": "boolean"
+        },
+        {
+          "name": "authorization_latency_ms",
+          "type": "int"
+        },
+        {
+          "name": "approved",
+          "type": "boolean"
+        },
+        {
+          "name": "response_code",
+          "type": "string"
+        },
+        {
+          "name": "retry_attempt",
+          "type": "int"
+        },
+        {
+          "name": "original_transaction_id",
+          "type": "bigint"
+        },
+        {
+          "name": "transaction_status",
+          "type": "string"
+        },
+        {
+          "name": "fraud_score",
+          "type": "decimal(5,2)"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.customers@local": {
+      "guid": "t-customers",
+      "typeName": "impala_table",
+      "name": "customers",
+      "owner": "customer_data",
+      "description": "Cardholder dimension: segment, home country/region, risk tier, KYC status.",
+      "classifications": [
+        "Finance",
+        "Synthetic_PII"
+      ],
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "bigint"
+        },
+        {
+          "name": "customer_type",
+          "type": "string"
+        },
+        {
+          "name": "customer_segment",
+          "type": "string"
+        },
+        {
+          "name": "home_country",
+          "type": "string"
+        },
+        {
+          "name": "home_region",
+          "type": "string"
+        },
+        {
+          "name": "onboarding_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "risk_tier",
+          "type": "string"
+        },
+        {
+          "name": "kyc_status",
+          "type": "string"
+        },
+        {
+          "name": "preferred_currency",
+          "type": "string"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.merchants@local": {
+      "guid": "t-merchants",
+      "typeName": "impala_table",
+      "name": "merchants",
+      "owner": "acquiring_ops",
+      "description": "Merchant dimension: MCC, category, country/region, currency, acquirer, size.",
+      "classifications": [
+        "Finance"
+      ],
+      "columns": [
+        {
+          "name": "merchant_id",
+          "type": "bigint"
+        },
+        {
+          "name": "merchant_name",
+          "type": "string"
+        },
+        {
+          "name": "merchant_category_code",
+          "type": "string"
+        },
+        {
+          "name": "merchant_category",
+          "type": "string"
+        },
+        {
+          "name": "industry_group",
+          "type": "string"
+        },
+        {
+          "name": "merchant_country",
+          "type": "string"
+        },
+        {
+          "name": "merchant_region",
+          "type": "string"
+        },
+        {
+          "name": "merchant_currency",
+          "type": "string"
+        },
+        {
+          "name": "acquirer_id",
+          "type": "int"
+        },
+        {
+          "name": "merchant_size",
+          "type": "string"
+        },
+        {
+          "name": "onboarded_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "risk_tier",
+          "type": "string"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.payment_terminals@local": {
+      "guid": "t-payment-terminals",
+      "typeName": "impala_table",
+      "name": "payment_terminals",
+      "owner": "acquiring_ops",
+      "description": "Terminal dimension; each terminal belongs to one merchant. terminal_channel is pos, ecommerce, etc.",
+      "classifications": [],
+      "columns": [
+        {
+          "name": "terminal_id",
+          "type": "bigint"
+        },
+        {
+          "name": "merchant_id",
+          "type": "bigint"
+        },
+        {
+          "name": "terminal_type",
+          "type": "string"
+        },
+        {
+          "name": "terminal_channel",
+          "type": "string"
+        },
+        {
+          "name": "terminal_country",
+          "type": "string"
+        },
+        {
+          "name": "device_vendor",
+          "type": "string"
+        },
+        {
+          "name": "device_model",
+          "type": "string"
+        },
+        {
+          "name": "software_version",
+          "type": "string"
+        },
+        {
+          "name": "installed_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.payment_processors@local": {
+      "guid": "t-payment-processors",
+      "typeName": "impala_table",
+      "name": "payment_processors",
+      "owner": "payments_platform",
+      "description": "Processor dimension: name, type, operating region, settlement currency, service tier.",
+      "classifications": [],
+      "columns": [
+        {
+          "name": "processor_id",
+          "type": "int"
+        },
+        {
+          "name": "processor_name",
+          "type": "string"
+        },
+        {
+          "name": "processor_type",
+          "type": "string"
+        },
+        {
+          "name": "operating_region",
+          "type": "string"
+        },
+        {
+          "name": "headquarters_country",
+          "type": "string"
+        },
+        {
+          "name": "settlement_currency",
+          "type": "string"
+        },
+        {
+          "name": "service_tier",
+          "type": "string"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.routing_rules@local": {
+      "guid": "t-routing-rules",
+      "typeName": "impala_table",
+      "name": "routing_rules",
+      "owner": "payments_platform",
+      "description": "Routing rule history. Each row is one configuration_version of a route family, valid on the half-open window [effective_from_ts, effective_to_ts), with a rollout_percentage and the change ticket that introduced it.",
+      "classifications": [
+        "Change_Managed"
+      ],
+      "columns": [
+        {
+          "name": "routing_rule_id",
+          "type": "bigint"
+        },
+        {
+          "name": "route_family_id",
+          "type": "bigint"
+        },
+        {
+          "name": "configuration_version",
+          "type": "string"
+        },
+        {
+          "name": "rule_priority",
+          "type": "int"
+        },
+        {
+          "name": "processor_id",
+          "type": "int"
+        },
+        {
+          "name": "fallback_processor_id",
+          "type": "int"
+        },
+        {
+          "name": "channel",
+          "type": "string"
+        },
+        {
+          "name": "card_network",
+          "type": "string"
+        },
+        {
+          "name": "cross_border_required",
+          "type": "boolean"
+        },
+        {
+          "name": "currency_conversion_required",
+          "type": "boolean"
+        },
+        {
+          "name": "merchant_category_code",
+          "type": "string"
+        },
+        {
+          "name": "merchant_country",
+          "type": "string"
+        },
+        {
+          "name": "effective_from_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "effective_to_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "rollout_percentage",
+          "type": "decimal(5,2)"
+        },
+        {
+          "name": "routing_strategy",
+          "type": "string"
+        },
+        {
+          "name": "change_ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "is_enabled",
+          "type": "boolean"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.deployment_events@local": {
+      "guid": "t-deployment-events",
+      "typeName": "impala_table",
+      "name": "deployment_events",
+      "owner": "payments_platform",
+      "description": "Deployments of processor and routing components: previous and deployed version, rollout percentage, start/complete/rollback times, change ticket, release notes.",
+      "classifications": [
+        "Change_Managed"
+      ],
+      "columns": [
+        {
+          "name": "deployment_id",
+          "type": "bigint"
+        },
+        {
+          "name": "change_ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "component_name",
+          "type": "string"
+        },
+        {
+          "name": "component_type",
+          "type": "string"
+        },
+        {
+          "name": "processor_id",
+          "type": "int"
+        },
+        {
+          "name": "routing_rule_id",
+          "type": "bigint"
+        },
+        {
+          "name": "previous_version",
+          "type": "string"
+        },
+        {
+          "name": "deployed_version",
+          "type": "string"
+        },
+        {
+          "name": "environment",
+          "type": "string"
+        },
+        {
+          "name": "started_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "completed_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "deployment_status",
+          "type": "string"
+        },
+        {
+          "name": "rollout_percentage",
+          "type": "decimal(5,2)"
+        },
+        {
+          "name": "rollback_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "release_notes",
+          "type": "string"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.processor_incidents@local": {
+      "guid": "t-processor-incidents",
+      "typeName": "impala_table",
+      "name": "processor_incidents",
+      "owner": "payments_sre",
+      "description": "Operational incidents reported against processors: type, severity, affected region/channel, start/resolve times, impact summary.",
+      "classifications": [],
+      "columns": [
+        {
+          "name": "processor_incident_id",
+          "type": "bigint"
+        },
+        {
+          "name": "processor_id",
+          "type": "int"
+        },
+        {
+          "name": "incident_type",
+          "type": "string"
+        },
+        {
+          "name": "severity",
+          "type": "string"
+        },
+        {
+          "name": "affected_region",
+          "type": "string"
+        },
+        {
+          "name": "affected_channel",
+          "type": "string"
+        },
+        {
+          "name": "started_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "resolved_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "reported_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "customer_impact_summary",
+          "type": "string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "string"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.transaction_response_codes@local": {
+      "guid": "t-transaction-response-codes",
+      "typeName": "impala_table",
+      "name": "transaction_response_codes",
+      "owner": "payments_platform",
+      "description": "Reference table for response_code: category, description, approved/retryable flags, decline type.",
+      "classifications": [],
+      "columns": [
+        {
+          "name": "response_code",
+          "type": "string"
+        },
+        {
+          "name": "response_category",
+          "type": "string"
+        },
+        {
+          "name": "response_description",
+          "type": "string"
+        },
+        {
+          "name": "is_approved",
+          "type": "boolean"
+        },
+        {
+          "name": "is_retryable",
+          "type": "boolean"
+        },
+        {
+          "name": "decline_type",
+          "type": "string"
+        },
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        }
+      ]
+    },
+    "meridian_financial.generation_runs@local": {
+      "guid": "t-generation-runs",
+      "typeName": "impala_table",
+      "name": "generation_runs",
+      "owner": "payments_data_eng",
+      "description": "Load audit: one row per dataset load, with row counts, dataset window and validation status. Filter every table by generation_run_id from the latest complete run.",
+      "classifications": [],
+      "columns": [
+        {
+          "name": "generation_run_id",
+          "type": "string"
+        },
+        {
+          "name": "generator_version",
+          "type": "string"
+        },
+        {
+          "name": "scenario_name",
+          "type": "string"
+        },
+        {
+          "name": "seed",
+          "type": "bigint"
+        },
+        {
+          "name": "configuration_hash",
+          "type": "string"
+        },
+        {
+          "name": "requested_transaction_count",
+          "type": "bigint"
+        },
+        {
+          "name": "generated_transaction_count",
+          "type": "bigint"
+        },
+        {
+          "name": "generation_started_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "generation_completed_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "dataset_start_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "dataset_end_ts",
+          "type": "timestamp"
+        },
+        {
+          "name": "run_status",
+          "type": "string"
+        },
+        {
+          "name": "validation_status",
+          "type": "string"
+        },
+        {
+          "name": "notes",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "lineage": [
+    {
+      "from": "staging.payment_transactions_parquet@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "impala_insert_payment_transactions"
+    },
+    {
+      "from": "staging.customers_parquet@local",
+      "to": "meridian_financial.customers@local",
+      "process": "impala_insert_customers"
+    },
+    {
+      "from": "staging.merchants_parquet@local",
+      "to": "meridian_financial.merchants@local",
+      "process": "impala_insert_merchants"
+    },
+    {
+      "from": "staging.payment_terminals_parquet@local",
+      "to": "meridian_financial.payment_terminals@local",
+      "process": "impala_insert_payment_terminals"
+    },
+    {
+      "from": "staging.payment_processors_parquet@local",
+      "to": "meridian_financial.payment_processors@local",
+      "process": "impala_insert_payment_processors"
+    },
+    {
+      "from": "staging.routing_rules_parquet@local",
+      "to": "meridian_financial.routing_rules@local",
+      "process": "impala_insert_routing_rules"
+    },
+    {
+      "from": "staging.deployment_events_parquet@local",
+      "to": "meridian_financial.deployment_events@local",
+      "process": "impala_insert_deployment_events"
+    },
+    {
+      "from": "staging.processor_incidents_parquet@local",
+      "to": "meridian_financial.processor_incidents@local",
+      "process": "impala_insert_processor_incidents"
+    },
+    {
+      "from": "staging.transaction_response_codes_parquet@local",
+      "to": "meridian_financial.transaction_response_codes@local",
+      "process": "impala_insert_transaction_response_codes"
+    },
+    {
+      "from": "staging.generation_runs_parquet@local",
+      "to": "meridian_financial.generation_runs@local",
+      "process": "impala_insert_generation_runs"
+    },
+    {
+      "from": "meridian_financial.customers@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_customer_id"
+    },
+    {
+      "from": "meridian_financial.merchants@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_merchant_id"
+    },
+    {
+      "from": "meridian_financial.payment_terminals@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_terminal_id"
+    },
+    {
+      "from": "meridian_financial.payment_processors@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_processor_id"
+    },
+    {
+      "from": "meridian_financial.routing_rules@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_routing_rule_id"
+    },
+    {
+      "from": "meridian_financial.transaction_response_codes@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_response_code"
+    },
+    {
+      "from": "meridian_financial.merchants@local",
+      "to": "meridian_financial.payment_terminals@local",
+      "process": "fk_merchant_id"
+    },
+    {
+      "from": "meridian_financial.payment_processors@local",
+      "to": "meridian_financial.routing_rules@local",
+      "process": "fk_processor_id"
+    },
+    {
+      "from": "meridian_financial.routing_rules@local",
+      "to": "meridian_financial.deployment_events@local",
+      "process": "fk_routing_rule_id"
+    },
+    {
+      "from": "meridian_financial.payment_processors@local",
+      "to": "meridian_financial.processor_incidents@local",
+      "process": "fk_processor_id"
+    },
+    {
+      "from": "meridian_financial.generation_runs@local",
+      "to": "meridian_financial.payment_transactions@local",
+      "process": "fk_generation_run_id"
+    }
+  ]
 }

@@ -156,7 +156,7 @@ def settings() -> Settings:
             port=_int(os.environ.get("IMPALA_PORT"), 21050),
             user=_str("IMPALA_USER"),
             password=_str("IMPALA_PASSWORD"),
-            database=_str("IMPALA_DATABASE", "retail_demo"),
+            database=_str("IMPALA_DATABASE", "meridian_financial"),
             auth_mechanism=_str("IMPALA_AUTH_MECHANISM", "NOSASL").upper(),
             use_http=_bool(os.environ.get("IMPALA_USE_HTTP"), False),
             http_path=_str("IMPALA_HTTP_PATH", "cliservice"),
