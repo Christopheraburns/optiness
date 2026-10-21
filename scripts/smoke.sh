@@ -31,7 +31,8 @@ echo "== 3. iceberg v2 probe"
 
 echo "== 4. prime-agent headless"
 if [ -n "${MISTRAL_API_KEY:-}" ]; then
-  prime-agent --print --thinking off \
+  # -p ignores settings.json defaultModel (falls back to devstral), so name the model.
+  prime-agent --print --provider "${ROOT_MODEL%%/*}" --model "${ROOT_MODEL#*/}" --thinking off \
     "Using the python_repl, run: from services.common.impala import run_query; print(run_query('SHOW DATABASES').rows). Reply with the database names only." \
     2>&1 | tail -5
 else

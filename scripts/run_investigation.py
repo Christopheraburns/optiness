@@ -139,9 +139,15 @@ def main() -> int:
                 break
             # Done only when the findings exist and nobody is still working: an early
             # findings file written before the children reported does not count.
-            if findings.exists() and findings.stat().st_size and time.time() - acp.last_event > 10 \
-                    and not agents_busy():
+            quiet = time.time() - acp.last_event > 10
+            if findings.exists() and findings.stat().st_size and quiet and not agents_busy():
                 outcome = "findings written"
+                break
+            # The first turn has ended and nothing is running, yet there are no findings:
+            # no child will wake the root, so waiting out the timeout gains nothing. Seen
+            # when the model writes its tool calls as text instead of calling the tool.
+            if acp.replies.get(3) is not None and time.time() - acp.last_event > 30 and not agents_busy():
+                outcome = f"root went idle without findings (tool calls {acp.tool_calls})"
                 break
     finally:
         acp.close()
