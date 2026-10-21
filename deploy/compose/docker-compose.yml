@@ -55,6 +55,7 @@ services:
       - impala-quickstart-hms:/var/lib/hive
       - impala-quickstart-warehouse:/user/hive/warehouse
       - ./quickstart_conf:/opt/hive/conf:ro
+      - ../../data/staging:/home/cdsw/data/staging:ro   # D4 staged Meridian Parquet, same path the bridge sees
     restart: unless-stopped
 
   # Native (arm64-friendly) sidecar that becomes healthy once the metastore
@@ -98,6 +99,7 @@ services:
     volumes:
       - impala-quickstart-warehouse:/user/hive/warehouse
       - ./quickstart_conf:/opt/impala/conf:ro
+      - ../../data/staging:/home/cdsw/data/staging:ro   # D4 staged Meridian Parquet, same path the bridge sees
     ports:
       - "127.0.0.1:25020:25020"
     restart: unless-stopped
@@ -117,6 +119,7 @@ services:
     volumes:
       - impala-quickstart-warehouse:/user/hive/warehouse
       - ./quickstart_conf:/opt/impala/conf:ro
+      - ../../data/staging:/home/cdsw/data/staging:ro   # D4 staged Meridian Parquet, same path the bridge sees
     ports:
       - "127.0.0.1:21050:21050"   # HiveServer2 (impyla, impala-shell --protocol=hs2)
       - "127.0.0.1:28000:28000"   # HiveServer2 over HTTP (what CDW uses)

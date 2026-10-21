@@ -26,3 +26,17 @@ To point children at Ollama instead of Mistral, set in `.env`:
     CAII_TOKEN=ollama
     CAII_MODEL=ministral-3:3b
     CHILD_MODEL=cloudera-ai-inference/ministral-3:3b
+
+Loading data (BURNDOWN D4). Meridian generates the data in its own repo; `make data`
+stages one complete public run and loads it into the Iceberg tables:
+
+    make schema                                   # once: create the 12 tables
+    make data                                     # default ../meridian/data/demo-public
+    make data MERIDIAN_PUBLIC_DIR=../meridian/data/demo-50m-public REPLACE=1
+
+The emulated impalad is fragile on writes. Multithreaded (`mt_dop`) or LLVM-codegen'd
+partitioned inserts can wedge it: either every thrift server dies with "Interrupted
+system call", or a fragment stops with 0% CPU. `data/load.py` therefore writes with
+`MT_DOP=0` and `DISABLE_CODEGEN=true` on the local stack, a 180 s time limit, and
+retries. If impalad still wedges, `docker restart primeagent-impalad-1` and re-run
+`make data`; it resumes where it stopped. Agent reads use the default options.

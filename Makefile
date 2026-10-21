@@ -5,6 +5,8 @@ IMAGE ?= christopheraburns/prime-agent-runtime:0.10.0
 PROFILES ?=
 COMPOSE := docker compose --env-file .env -f deploy/compose/docker-compose.yml $(foreach p,$(PROFILES),--profile $(p))
 PY := python3
+# Meridian (separate repo) generates the data; see its config/demo.yaml.
+MERIDIAN_PUBLIC_DIR ?= ../meridian/data/demo-public
 
 .PHONY: help env up down logs render data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
@@ -30,9 +32,9 @@ down: ## Stop the local stack; V=1 also deletes the warehouse volume
 logs: ## Tail local stack logs
 	$(COMPOSE) logs -f --tail=100
 
-data: ## Generate and load DATA_SCALE rows into Iceberg via Impala
-	@test -f data/generate.py || (echo "data/generate.py not written yet (BURNDOWN D3)"; exit 1)
-	$(COMPOSE) exec bridge bash -lc 'python /home/cdsw/data/generate.py && python /home/cdsw/data/load.py'
+data: ## Stage a Meridian public run (MERIDIAN_PUBLIC_DIR) and load it into Iceberg; REPLACE=1 swaps out a loaded run
+	$(PY) data/stage.py --source $(MERIDIAN_PUBLIC_DIR)
+	$(COMPOSE) exec -T bridge bash -lc 'python -u /home/cdsw/data/load.py $(if $(REPLACE),--replace,)'
 
 smoke: ## Connectivity, Iceberg DDL probe, and a Prime Agent run if MISTRAL_API_KEY is set
 	$(COMPOSE) exec bridge bash -lc '/home/cdsw/scripts/smoke.sh'
