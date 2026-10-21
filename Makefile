@@ -8,7 +8,7 @@ PY := python3
 # Meridian (separate repo) generates the data; see its config/demo.yaml.
 MERIDIAN_PUBLIC_DIR ?= ../meridian/data/demo-public
 
-.PHONY: help env up down logs render data smoke deploy-cml screens image shell impala-shell tunnel test schema
+.PHONY: help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -35,6 +35,9 @@ logs: ## Tail local stack logs
 data: ## Stage a Meridian public run (MERIDIAN_PUBLIC_DIR) and load it into Iceberg; REPLACE=1 swaps out a loaded run
 	$(PY) data/stage.py --source $(MERIDIAN_PUBLIC_DIR)
 	$(COMPOSE) exec -T bridge bash -lc 'python -u /home/cdsw/data/load.py $(if $(REPLACE),--replace,)'
+
+validate-data: ## Bankwide SQL checks of the loaded data; writes docs/data-validation.md and a chart
+	$(COMPOSE) exec -T bridge bash -lc 'python -u /home/cdsw/scripts/validate_bankwide.py'
 
 smoke: ## Connectivity, Iceberg DDL probe, and a Prime Agent run if MISTRAL_API_KEY is set
 	$(COMPOSE) exec bridge bash -lc '/home/cdsw/scripts/smoke.sh'
