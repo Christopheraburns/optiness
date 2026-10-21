@@ -1,0 +1,127 @@
+{
+    "date_range": {
+        "start_date": "2026-09-14",
+        "end_date": "2026-09-18"
+    },
+    "decline_rate": {
+        "decline_count": 6753,
+        "total_count": 116665,
+        "rate": 0.05788368405262932,
+        "evidence": {
+            "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM\n    payment_transactions\nWHERE\n    transaction_ts BETWEEN DATE_TRUNC('day', CAST('2026-09-14' AS TIMESTAMP)) AND DATE_TRUNC('day', CAST('2026-09-18' AS TIMESTAMP))\n",
+            "row_count": 1,
+            "truncated": false,
+            "elapsed_ms": 205
+        }
+    },
+    "baseline_comparison": {
+        "baseline_decline_count": 6663,
+        "baseline_total_count": 116233,
+        "baseline_rate": 0.05732451197164317,
+        "evidence": {
+            "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM\n    payment_transactions\nWHERE\n    transaction_ts BETWEEN DATE_TRUNC('day', CAST('2026-09-21' AS TIMESTAMP)) AND DATE_TRUNC('day', CAST('2026-09-25' AS TIMESTAMP))\n",
+            "row_count": 1,
+            "truncated": false,
+            "elapsed_ms": 162
+        }
+    },
+    "top_decline_causes": {
+        "response_codes": [
+            {
+                "response_code": "05",
+                "frequency": 4571
+            },
+            {
+                "response_code": "59",
+                "frequency": 1997
+            },
+            {
+                "response_code": "91",
+                "frequency": 185
+            }
+        ]
+    },
+    "anomalies": [
+        {
+            "processor_id": 3,
+            "processor_count": 3139,
+            "card_network": "Mastercard",
+            "card_network_count": 3139,
+            "channel": "ecommerce",
+            "channel_count": 3139
+        },
+        {
+            "processor_id": 2,
+            "processor_count": 70,
+            "card_network": "Mastercard",
+            "card_network_count": 70,
+            "channel": "ecommerce",
+            "channel_count": 70
+        },
+        {
+            "processor_id": 4,
+            "processor_count": 67,
+            "card_network": "Mastercard",
+            "card_network_count": 67,
+            "channel": "ecommerce",
+            "channel_count": 67
+        },
+        {
+            "processor_id": 5,
+            "processor_count": 67,
+            "card_network": "Mastercard",
+            "card_network_count": 67,
+            "channel": "ecommerce",
+            "channel_count": 67
+        },
+        {
+            "processor_id": 1,
+            "processor_count": 64,
+            "card_network": "Mastercard",
+            "card_network_count": 64,
+            "channel": "ecommerce",
+            "channel_count": 64
+        },
+        {
+            "processor_id": 6,
+            "processor_count": 62,
+            "card_network": "Mastercard",
+            "card_network_count": 62,
+            "channel": "ecommerce",
+            "channel_count": 62
+        },
+        {
+            "processor_id": 0,
+            "processor_count": 52,
+            "card_network": "Mastercard",
+            "card_network_count": 52,
+            "channel": "ecommerce",
+            "channel_count": 52
+        },
+        {
+            "processor_id": 7,
+            "processor_count": 49,
+            "card_network": "Mastercard",
+            "card_network_count": 49,
+            "channel": "ecommerce",
+            "channel_count": 49
+        },
+        {
+            "processor_id": 4,
+            "processor_count": 40,
+            "card_network": "Visa",
+            "card_network_count": 40,
+            "channel": "pos",
+            "channel_count": 40
+        },
+        {
+            "processor_id": 4,
+            "processor_count": 40,
+            "card_network": "Amex",
+            "card_network_count": 40,
+            "channel": "mobile",
+            "channel_count": 40
+        }
+    ],
+    "notes": "\n    The decline rate for the period 2026-09-14 to 2026-09-18 is approximately 5.79%,\n    compared to a baseline decline rate of approximately 5.73% for the period 2026-09-21 to 2026-09-25.\n    The top three response codes contributing to declines are 05, 59, and 91.\n    "
+}

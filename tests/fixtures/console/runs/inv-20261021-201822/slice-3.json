@@ -1,0 +1,808 @@
+{
+    "slice": "2026-09-21 to 2026-09-25",
+    "comparison_slice": "2026-09-14 to 2026-09-18",
+    "decline_rate": {
+        "current_slice": {
+            "decline_rate": 0.05732451197164317,
+            "total_transactions": 116233,
+            "declined_transactions": 6663,
+            "evidence": {
+                "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-21' AND '2026-09-25'\n",
+                "row_count": 116233,
+                "truncated": false,
+                "elapsed_ms": 114
+            }
+        },
+        "comparison_slice": {
+            "decline_rate": 0.05788368405262932,
+            "total_transactions": 116665,
+            "declined_transactions": 6753,
+            "evidence": {
+                "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-14' AND '2026-09-18'\n",
+                "row_count": 116665,
+                "truncated": false,
+                "elapsed_ms": 108
+            }
+        }
+    },
+    "top_response_codes": [
+        {
+            "response_code": "05",
+            "frequency": 4711
+        },
+        {
+            "response_code": "59",
+            "frequency": 1952
+        }
+    ],
+    "anomalies": [
+        {
+            "processor_id": 3,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 3175
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 67
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 64
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 59
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 59
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 54
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 53
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Mastercard",
+            "channel": "ecommerce",
+            "decline_count": 47
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 39
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 36
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 36
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 35
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 35
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 34
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 33
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 33
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 32
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 32
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 32
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 32
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 31
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 30
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 29
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 28
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 27
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 27
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 27
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 27
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 27
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 26
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 25
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 24
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 23
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 22
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 22
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Visa",
+            "channel": "ecommerce",
+            "decline_count": 22
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Discover",
+            "channel": "mobile",
+            "decline_count": 22
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 21
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 21
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 21
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Discover",
+            "channel": "pos",
+            "decline_count": 21
+        },
+        {
+            "processor_id": 5,
+            "card_network": "Mastercard",
+            "channel": "mobile",
+            "decline_count": 21
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Discover",
+            "channel": "recurring",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Amex",
+            "channel": "ecommerce",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 2,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 20
+        },
+        {
+            "processor_id": 4,
+            "card_network": "Discover",
+            "channel": "ecommerce",
+            "decline_count": 19
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Mastercard",
+            "channel": "pos",
+            "decline_count": 19
+        },
+        {
+            "processor_id": 0,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 19
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Visa",
+            "channel": "pos",
+            "decline_count": 19
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 18
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Amex",
+            "channel": "pos",
+            "decline_count": 18
+        },
+        {
+            "processor_id": 7,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 18
+        },
+        {
+            "processor_id": 6,
+            "card_network": "Visa",
+            "channel": "recurring",
+            "decline_count": 18
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 18
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Amex",
+            "channel": "mobile",
+            "decline_count": 16
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Amex",
+            "channel": "recurring",
+            "decline_count": 15
+        },
+        {
+            "processor_id": 1,
+            "card_network": "Mastercard",
+            "channel": "recurring",
+            "decline_count": 15
+        },
+        {
+            "processor_id": 3,
+            "card_network": "Visa",
+            "channel": "mobile",
+            "decline_count": 12
+        }
+    ]
+}

@@ -1,0 +1,104 @@
+{
+    "date_range": {
+        "start": "2026-09-19",
+        "end": "2026-09-20"
+    },
+    "decline_rate": {
+        "target": {
+            "decline_count": 1186,
+            "total_count": 20438,
+            "rate": 0.05802916136608279,
+            "evidence": {
+                "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-19' AND '2026-09-20'\n",
+                "row_count": 1,
+                "truncated": false,
+                "elapsed_ms": 279
+            }
+        },
+        "comparison": {
+            "decline_count": 6753,
+            "total_count": 116665,
+            "rate": 0.05788368405262932,
+            "evidence": {
+                "sql": "\nSELECT\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) AS declined_count,\n    COUNT(*) AS total_count,\n    SUM(CASE WHEN approved = FALSE THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS decline_rate\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-14' AND '2026-09-18'\n",
+                "row_count": 1,
+                "truncated": false,
+                "elapsed_ms": 279
+            }
+        }
+    },
+    "top_response_codes": {
+        "response_codes": [
+            {
+                "response_code": "05",
+                "frequency": 843
+            },
+            {
+                "response_code": "59",
+                "frequency": 343
+            }
+        ],
+        "evidence": {
+            "sql": "\nSELECT\n    response_code,\n    COUNT(*) AS frequency\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-19' AND '2026-09-20'\nAND approved = FALSE\nGROUP BY response_code\nORDER BY frequency DESC\nLIMIT 3\n",
+            "row_count": 2,
+            "truncated": false,
+            "elapsed_ms": 279
+        }
+    },
+    "anomalies": {
+        "anomalies": [
+            {
+                "processor_id": "3",
+                "card_network": "Mastercard",
+                "channel": "ecommerce",
+                "decline_count": 574
+            },
+            {
+                "processor_id": "0",
+                "card_network": "Mastercard",
+                "channel": "ecommerce",
+                "decline_count": 16
+            },
+            {
+                "processor_id": "5",
+                "card_network": "Mastercard",
+                "channel": "ecommerce",
+                "decline_count": 13
+            },
+            {
+                "processor_id": "4",
+                "card_network": "Mastercard",
+                "channel": "ecommerce",
+                "decline_count": 12
+            },
+            {
+                "processor_id": "6",
+                "card_network": "Mastercard",
+                "channel": "ecommerce",
+                "decline_count": 11
+            },
+            {
+                "processor_id": "4",
+                "card_network": "Mastercard",
+                "channel": "mobile",
+                "decline_count": 11
+            },
+            {
+                "processor_id": "1",
+                "card_network": "Visa",
+                "channel": "pos",
+                "decline_count": 11
+            }
+        ],
+        "evidence": {
+            "sql": "\nSELECT\n    processor_id,\n    card_network,\n    channel,\n    COUNT(*) AS decline_count\nFROM payment_transactions\nWHERE transaction_ts BETWEEN '2026-09-19' AND '2026-09-20'\nAND approved = FALSE\nGROUP BY processor_id, card_network, channel\nHAVING COUNT(*) > 10  -- Threshold for anomaly detection\nORDER BY decline_count DESC\n",
+            "row_count": 7,
+            "truncated": false,
+            "elapsed_ms": 279
+        }
+    },
+    "comparison_period": {
+        "start": "2026-09-14",
+        "end": "2026-09-18"
+    }
+}
