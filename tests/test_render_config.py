@@ -34,8 +34,10 @@ def test_mistral_set_with_correct_reasoning_flags(env):
     m = models(env(MISTRAL_API_KEY="k"), "mistral")
     assert set(m) == {mid for mid, *_ in MISTRAL_MODELS}
     assert m["mistral-large-latest"]["reasoning"] is False
-    assert m["mistral-large-4"]["reasoning"] is True
-    assert m["magistral-medium-latest"]["reasoning"] is True
+    # Large 4 and Medium 3.5 need reasoning_effort, which pa-core v0.10.0 cannot send.
+    assert m["mistral-large-4"]["reasoning"] is False
+    assert m["mistral-medium-latest"]["reasoning"] is False
+    assert m["magistral-medium-latest"]["reasoning"] is False
     assert not m["ministral-8b-latest"]["reasoning"]
 
 

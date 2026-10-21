@@ -27,11 +27,16 @@ from services.common.env import redacted, settings  # noqa: E402
 # calls. Declared explicitly so runs never depend on the remote catalog, and
 # because the bundled catalog is stale for some (magistral-medium shows 128K).
 # Only reasoning models may receive a thinking level: mistral-large-latest
-# (= 2512) is not one; mistral-large-4 and the Magistral models are.
+# (= 2512) is not one. Large 4 and Medium 3.5 reason on the API, but only through
+# `reasoning_effort` (high|none); pa-core v0.10.0's Mistral adapter sends the older
+# `prompt_mode: reasoning`, which they reject (400, checked 2026-10-21), and its
+# OpenAI-compatible adapter gets 422 from Mistral. So they are declared
+# non-reasoning here and always run with thinking off.
 MISTRAL_MODELS = (
     ("mistral-large-latest", "Mistral Large 3", 262_144, False),
-    ("mistral-large-4", "Mistral Large 4", 1_048_576, True),
-    ("magistral-medium-latest", "Magistral Medium", 262_144, True),
+    ("mistral-large-4", "Mistral Large 4", 1_048_576, False),
+    ("mistral-medium-latest", "Mistral Medium 3.5", 262_144, False),
+    ("magistral-medium-latest", "Magistral Medium (= Medium 3.5)", 262_144, False),
     ("magistral-small-latest", "Magistral Small", 262_144, True),
     ("ministral-14b-latest", "Ministral 14B", 262_144, False),
     ("ministral-8b-latest", "Ministral 8B", 262_144, False),

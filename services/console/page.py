@@ -141,8 +141,8 @@ def show_investigation(inv: Investigation) -> None:
     cols[3].metric("Tokens", fmt_int(sum(tokens)) if tokens else "–")
     cols[4].metric("SQL in cells", sum(len(c.sql) for s in sessions for c in s.cells))
 
-    st.graphviz_chart(tree_dot(inv.root), use_container_width=True)
-    st.dataframe(session_table(inv), hide_index=True, use_container_width=True)
+    st.graphviz_chart(tree_dot(inv.root))
+    st.dataframe(session_table(inv), hide_index=True)
 
     tabs = st.tabs(["Findings", "Sessions", "Root reply", "Other outputs"])
     with tabs[0]:
