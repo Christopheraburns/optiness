@@ -6,25 +6,26 @@ description: Read-only SQL over the Meridian Financial Iceberg tables in Impala.
 # Lakehouse
 
 Query the `meridian_financial` database (Apache Iceberg tables served by Impala)
-from the Python kernel. Every call is read-only: anything other than a single
+from the Python kernel. Every function is async: `await` it
+(several can run at once with `asyncio.gather`). Every call is read-only: anything other than a single
 SELECT / WITH / SHOW / DESCRIBE / EXPLAIN statement is refused before it is sent.
 Results stay in the kernel as DataFrames; print summaries, not whole frames.
 
 ```python
-tables = lakehouse.tables()                       # DataFrame: name
-cols = lakehouse.describe("payment_transactions") # DataFrame: name, type, comment
-prof = lakehouse.profile("merchants")             # one row per column: nulls, distinct, min, max
+tables = await lakehouse.tables()                       # DataFrame: name
+cols = await lakehouse.describe("payment_transactions") # DataFrame: name, type, comment
+prof = await lakehouse.profile("merchants")             # one row per column: nulls, distinct, min, max
 
-daily = lakehouse.query("""
+daily = await lakehouse.query("""
     SELECT CAST(transaction_ts AS DATE) AS day, COUNT(*) AS attempts,
            AVG(CASE WHEN approved THEN 0 ELSE 1 END) AS decline_rate
     FROM payment_transactions GROUP BY 1 ORDER BY 1""")
 print(daily.attrs["row_count"], daily.attrs["elapsed_ms"])
-lakehouse.show(daily, 10)                         # capped print
+await lakehouse.show(daily, 10)                         # capped print
 
-parts = lakehouse.partitions("payment_transactions")  # Iceberg daily partitions
-snaps = lakehouse.snapshots("payment_transactions")   # commit history
-plan = lakehouse.explain("SELECT COUNT(*) FROM payment_transactions")
+parts = await lakehouse.partitions("payment_transactions")  # Iceberg daily partitions
+snaps = await lakehouse.snapshots("payment_transactions")   # commit history
+plan = await lakehouse.explain("SELECT COUNT(*) FROM payment_transactions")
 ```
 
 ## API

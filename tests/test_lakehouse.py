@@ -21,13 +21,26 @@ if pytest is not None:
     pytest.importorskip("impala")
     pytest.importorskip("pandas")
 
-import lakehouse  # noqa: E402
+import inspect  # noqa: E402
+
+sys.path.insert(0, str(REPO / "tests"))
+import lakehouse as _lakehouse  # noqa: E402
+from sync_skill import Sync  # noqa: E402
+
+lakehouse = Sync(_lakehouse)
 
 if pytest is not None:
     try:
         lakehouse.query("SELECT 1")
     except Exception as exc:  # noqa: BLE001
         pytest.skip(f"local Impala not reachable: {exc}", allow_module_level=True)
+
+
+def test_public_functions_are_async():
+    # prime-agent teaches `await <skill>.fn()`; a sync skill costs the model turns.
+    for name in _lakehouse.__all__:
+        fn = getattr(_lakehouse, name)
+        assert not callable(fn) or inspect.isclass(fn) or inspect.iscoroutinefunction(fn), name
 
 
 def test_tables_and_describe():
