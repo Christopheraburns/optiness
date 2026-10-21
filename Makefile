@@ -8,7 +8,7 @@ PY := python3
 # Meridian (separate repo) generates the data; see its config/demo.yaml.
 MERIDIAN_PUBLIC_DIR ?= ../meridian/data/demo-public
 
-.PHONY: help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
+.PHONY: test-impala help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -22,12 +22,12 @@ image: ## Build the runtime image (amd64)
 render: env ## Render models.json and settings.json from .env into the agent dir
 	set -a && source .env && set +a && $(PY) scripts/render_config.py
 
-up: env ## Start the local stack (Impala quickstart, bridge, console); add PROFILES=ollama
+up: env ## Start the local stack (Impala quickstart, bridge, console)
 	$(COMPOSE) up -d
 	@echo "bridge  http://localhost:18080/   console http://localhost:18090/   impala UI http://localhost:25000/"
 
 down: ## Stop the local stack; V=1 also deletes the warehouse volume
-	-$(COMPOSE) --profile ollama --profile tunnel --profile tools down $(if $(V),-v,)
+	-$(COMPOSE) --profile tunnel --profile tools down $(if $(V),-v,)
 
 logs: ## Tail local stack logs
 	$(COMPOSE) logs -f --tail=100
@@ -59,6 +59,9 @@ tunnel: ## Start the cloudflared tunnel and print its public URL
 
 test: ## Unit tests (metadata backends)
 	$(PY) -m pytest -q tests
+
+test-impala: ## Skill tests against local Impala, in the agent kernel's Python
+	$(COMPOSE) exec -T bridge bash -lc '$$PRIME_AGENT_KERNEL_PYTHON /home/cdsw/tests/test_lakehouse.py'
 
 deploy-cml: ## Create or update the Workbench applications with cmlapi
 	@test -f deploy/cml/deploy.py || (echo "deploy/cml/deploy.py not written yet (BURNDOWN I3)"; exit 1)

@@ -17,7 +17,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | Metadata | `METADATA_BACKEND=stub` (or Atlas container) | `METADATA_BACKEND=atlas` | env |
 | Policy | none (Impala local user) | Ranger on workload user | server-side, no code |
 | Root model | Mistral API | Mistral API | none |
-| Child model | Ollama/vLLM serving Ministral, OpenAI-compatible | Cloudera AI Inference endpoint | `CAII_BASE_URL`, `CAII_TOKEN`, `CHILD_MODEL` |
+| Child model | Mistral API (Ministral) | Mistral API (Ministral) | none |
 | Public URL for Studio | cloudflared tunnel to the bridge | Workbench application URL | connector setting |
 | Data size | `DATA_SCALE=2000000` | `DATA_SCALE=50000000` | env |
 
@@ -49,7 +49,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | C1 | docker-compose: Impala quickstart (HMS, statestored, catalogd, impalad) with persistent volume | `impala-shell -q "select 1"` works | 2 | Done |
 | C2 | Verify Iceberg v2 DDL on the local Impala version (CREATE TABLE ... STORED AS ICEBERG, partition transforms, metadata tables) | Test table created and queried | 1 | Done |
 | C3 | Metadata backend switch: `stub` reads a JSON catalog file; `atlas` uses REST. Optional Atlas container documented but not required | Both backends pass the same unit test | 2 | Done |
-| C4 | Ollama or vLLM container serving Ministral with OpenAI-compatible API and tool calling enabled | `curl /v1/chat/completions` returns a tool call | 2 | Done |
+| C4 | ~~Ollama container serving Ministral as a Cloudera AI Inference stand-in~~. Cut 2026-10-21: all models run on Mistral's endpoints; service removed from compose | n/a | 2 | Cut |
 | C5 | cloudflared (or ngrok) compose service exposing the bridge over public HTTPS for Studio during development. Written and validated; run `make tunnel` when ready to publish | Public URL answers `/healthz` | 1 | Doing |
 | C6 | Compose services for bridge and console using the runtime image, `.env`, `/home/cdsw` volume | `make up` brings everything green | 1 | Done |
 | C7 | Local smoke: Prime Agent in container queries local Impala via the lakehouse skill | `make smoke` passes | 1 | Done |
@@ -70,15 +70,15 @@ Only values differ. Nothing is edited to move from Local to CAI.
 
 | ID | Item | Done when | Est | Status |
 |---|---|---|---|---|
-| E1 | `models.json` template: `mistral` provider (Large, Magistral, Ministral) plus `cloudera-ai-inference` custom `openai-completions` provider | `prime-agent models` lists all | 1 | Todo |
-| E2 | `settings.json` template: `rlmMaxDepth`, skills dir, compaction threshold, optional `mcpServers` entry for the Impala MCP server | Settings load without warnings | 1 | Todo |
-| E3 | `lakehouse` skill: `query(sql, max_rows)`, `profile(table)`, `partitions(table)`, `snapshots(table)`, `explain(sql)`; read-only guard; row cap; DataFrame return; capped printing | Unit tests pass against Local Impala | 4 | Todo |
+| E1 | `models.json` rendered by `scripts/render_config.py`: `mistral` provider with an explicit set checked against Mistral's `/v1/models` on 2026-10-21 (Large 3 `mistral-large-latest`, Large 4 `mistral-large-4` 1M ctx, Magistral Medium/Small, Ministral 14B/8B/3B) with correct reasoning flags (Large 3 is *not* a reasoning model), the only provider: every model call goes to Mistral's endpoints | `prime-agent model list` lists all | 1 | Done |
+| E2 | `settings.json` rendered by `scripts/render_config.py`, keys checked against pa-core v0.10.0 `Settings`: `rlmMaxDepth`, skills dir, `subagentDefaultModel`; compaction via `reserveTokens` solved so the smallest root/child window compacts at `COMPACTION_THRESHOLD_TOKENS` (96k: caps per-call tokens against Mistral's 2M tokens/min); `retry` 5 x from 2 s (covers a one-minute rate-limit window); `allowedModels: ["mistral/*"]` (daemon-enforced only; verified not applied in `-p` print mode, check under `--mode rpc` in F3); optional `mcpServers.impala` when `IMPALA_MCP_URL` is set. Fixed: the old `compaction.thresholdPercent` is not a real key and was silently ignored | prime-agent loads settings leniently and never warns (unknown keys kept, wrong types dropped), so: `render_config` validates every rendered key and type and warns on stderr; renders with no warnings | 1 | Done |
+| E3 | `skills/lakehouse`: `query(sql, max_rows)` → DataFrame with `attrs` sql/row_count/truncated/elapsed_ms, `tables`, `describe`, `profile`, `partitions`, `snapshots`, `explain`, `show`, `evidence()` (statement log for E10); read-only guard and connection reused from `services.common.impala`; table names validated before interpolation; pandas display capped. prime-agent only enables a Python skill the kernel can import and the kernel venv is root-owned, so skill `src` dirs go on `PYTHONPATH` (`.env`; Workbench project env); `render_config` warns on any unimportable skill | `make test-impala` 7/7 against local Impala in the kernel's Python; real agent turn on Mistral Large called it and returned 2,000,000 | 4 | Done |
 | E4 | `atlas` skill: `search(term)`, `entity(qualified_name)`, `lineage(table)`, `classifications(table)` over the metadata backend switch | Works with stub and Atlas | 2 | Todo |
 | E5 | Investigation prompt note (global): plan from metadata, delegate by partition or dimension, SQL plus row counts as evidence, concurrency cap, cite evidence in findings | Note present in global harness state | 1 | Todo |
 | E6 | Subagent spec "partition investigator" in global harness state, used by the root when spawning | Spec present and referenced in a run | 1 | Todo |
 | E7 | Headless smoke: `prime-agent -p` answers a single-table question through the lakehouse skill | Correct answer with SQL shown | 1 | Todo |
 | E8 | Recursive smoke: root on Mistral Large spawns three Ministral children by region, each runs SQL, root composes findings | Findings name the planted lot | 3 | Todo |
-| E9 | Verify Magistral reasoning levels map through the Mistral provider; verify child tool calling on Ollama and on AI Inference | Both produce REPL tool calls | 2 | Todo |
+| E9 | Verify Magistral reasoning levels map through the Mistral provider; verify Ministral child tool calling through the Mistral provider | Both produce REPL tool calls. **Risk found in E3:** given a plain run-this-code prompt, `ministral-8b-latest` made no tool call and invented the output (twice); Mistral Large called the tool correctly. Check Ministral 14B/8B under the E6 spec; if it does not call tools reliably, children move to a larger model | 2 | Todo |
 | E10 | Findings output contract: root ends with a JSON block `{findings:[{claim, confidence, evidence:[{session, sql, rows, elapsed_ms}]}]}` | Parser test passes | 1 | Todo |
 
 ## F. MCP bridge application (`services/bridge/app.py`)
@@ -123,13 +123,13 @@ Only values differ. Nothing is edited to move from Local to CAI.
 | I4 | External smoke: `/healthz` and F7 against the Workbench URL | Passes | 0.5 | Todo |
 | I5 | CDW connection: workload user, HTTP transport, SSL, `IMPALA_*` values | E7 passes on CAI | 1 | Todo |
 
-## J. Governance and private-inference evidence
+## J. Governance evidence
 
 | ID | Item | Done when | Est | Status |
 |---|---|---|---|---|
 | J1 | Ranger read-only policy for the investigator user on the demo database; attempt an INSERT and capture the denial | Screenshot | 1 | Todo |
 | J2 | Atlas lineage for `returns` and `transactions` after load; capture | Screenshot | 1 | Todo |
-| J3 | Cloudera AI Inference endpoint serving Ministral; tool-calling check from E9; capture | Screenshot | 2 | Todo |
+| J3 | ~~Cloudera AI Inference endpoint serving Ministral~~. Cut 2026-10-21: no Cloudera-hosted inference; model usage is shown from Mistral Studio instead (PLAN.md screenshot 9) | n/a | 2 | Cut |
 | J4 | CDW Impala query history showing model-generated SQL from a run; capture | Screenshot | 0.5 | Todo |
 | J5 | Continual Harness memory written by the agent during a run; capture | Screenshot | 0.5 | Todo |
 
@@ -162,7 +162,7 @@ Only values differ. Nothing is edited to move from Local to CAI.
 
 ## Suggested order
 
-Day 1: A1-A5, B1-B5, C1-C2, C6. Day 2: D1-D4, E1-E3, E7, C7. Day 3: E4-E6, E8-E10, C4, C5.
+Day 1: A1-A5, B1-B5, C1-C2, C6. Day 2: D1-D4, E1-E3, E7, C7. Day 3: E4-E6, E8-E10, C5.
 Day 4: F1-F7, G1-G4. Day 5: H1-H4, B6, I1-I5, G5. Day 6: D6, J1-J5, K1. Day 7: K2-K4.
 
 ## Must-have for a credible demo

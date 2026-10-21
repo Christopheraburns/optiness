@@ -43,11 +43,10 @@ Code facts that matter for us:
 - Mistral Studio Connectors = remote MCP servers (name, server URL, headers, visibility).
   A Prime Agent MCP server hosted as a Workbench Application is exactly that shape.
 - Prime Agent already speaks Mistral. Root on Mistral Large / Magistral, children on
-  Ministral via `rlm.spawn(model="mistral/ministral-...")` or a Cloudera AI Inference model.
+  Ministral via `rlm.spawn(model="mistral/ministral-...")`. Every model call goes to Mistral's
+  endpoints; no Cloudera-hosted inference is used in this demo.
 - Workbench Applications are long-running, do not time out, and get a public HTTPS URL.
   kevinbtalbert/Mistral-Cloudera-MCPs already hosts an Impala MCP server this way.
-- Cloudera AI Inference exposes OpenAI-compatible endpoints; `models.json` can register it
-  as an `openai-completions` provider so delegated models stay private.
 - CDW Impala: official cloudera/iceberg-mcp-server (get_schema, execute_query) exists.
   Better: an in-kernel `lakehouse` skill using impyla so results land as DataFrames in L2.
 - Iceberg metadata tables (snapshots, partitions, files) let the root plan partition-scoped
@@ -64,8 +63,7 @@ Code facts that matter for us:
    (start / status / result) and have the Studio agent poll or report partials.
 3. Connector needs a public HTTPS URL. Workbench app with unauthenticated access plus a
    bearer header configured on the connector.
-4. Tool calling on Cloudera AI Inference Ministral must be verified (vLLM/NIM tool parser).
-   Fallback: all models via Mistral API; AI Inference shown as the private-hosting path.
+4. Tool calling on Ministral children must be verified through the Mistral provider.
 5. Prime Agent kernel bootstrap downloads uv/Python; Workbench egress may block it.
    Pre-bake or test early.
 6. Security: model-written Python runs in the app container. Use read-only workload user,
@@ -85,7 +83,7 @@ Mistral Studio Agent (Mistral Large / Magistral)
        tools: start_investigation, get_investigation, get_findings, ask_followup, list_investigations
        backend: one `prime-agent --mode rpc` process per investigation, events persisted
   -> Prime Agent root session (Mistral Large) with skills: lakehouse, atlas, investigation
-       -> rlm.spawn children (Ministral via Mistral API or Cloudera AI Inference)
+       -> rlm.spawn children (Ministral via the Mistral API)
        -> each child runs Impala SQL through impyla (Ranger enforced) over Iceberg tables
   -> Workbench Application "investigation-console" (Streamlit/FastAPI over session JSONL)
   -> Workbench Application "agents-view" (ttyd running `prime-agent agents`)
@@ -105,5 +103,5 @@ Workbench without code changes.
 6. Impala query history in CDW showing the model-generated SQL.
 7. Atlas lineage for the returns table.
 8. Ranger policy for the investigator user.
-9. Cloudera AI Inference endpoint serving Ministral.
+9. Mistral Studio usage view showing the root (Large) and Ministral child model calls.
 10. Continual Harness memory written by the agent.

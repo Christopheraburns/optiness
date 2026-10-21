@@ -1,7 +1,6 @@
 # Local stack for Docker Desktop. Mirrors what Cloudera AI Workbench provides:
 #   impalad                -> Cloudera Data Warehouse (Impala)
 #   bridge, console        -> Workbench Applications on the same runtime image
-#   ollama  (profile)      -> Cloudera AI Inference stand-in (OpenAI-compatible)
 #   tunnel  (profile)      -> the Workbench application public URL
 #
 # The Impala services are the Apache Impala quickstart (amd64 only; Apple
@@ -10,7 +9,6 @@
 #
 # Usage from the repo root:
 #   make up                 # impala + bridge + console
-#   make up PROFILES=ollama # also the local child-model server
 #   make tunnel             # expose the bridge for a Mistral Studio connector
 
 name: primeagent
@@ -180,30 +178,6 @@ services:
     depends_on:
       - bridge
 
-  # ------------------------------------- Cloudera AI Inference stand-in
-  ollama:
-    image: ollama/ollama:${OLLAMA_VERSION:-latest}
-    profiles: ["ollama"]
-    container_name: primeagent-ollama
-    volumes:
-      - ollama-models:/root/.ollama
-    ports:
-      - "127.0.0.1:11434:11434"
-    restart: unless-stopped
-
-  ollama-pull:
-    image: ollama/ollama:${OLLAMA_VERSION:-latest}
-    profiles: ["ollama"]
-    depends_on:
-      - ollama
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-    entrypoint: ["/bin/sh", "-c"]
-    # Retry: the server needs a moment before it serves /api, and a pull that
-    # starts too early fails with "pull model manifest: file does not exist".
-    command: ["for i in $$(seq 1 30); do ollama pull ${OLLAMA_MODEL:-ministral-3:3b} && exit 0; echo retry $$i; sleep 10; done; exit 1"]
-    restart: "no"
-
   # -------------------------- public URL for the Mistral Studio connector
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -226,7 +200,6 @@ services:
 volumes:
   impala-quickstart-hms:
   impala-quickstart-warehouse:
-  ollama-models:
 
 # The network name must not contain an underscore: the Hive metastore client
 # builds thrift://<host>.<network>:9083 and Java's URI parser rejects

@@ -89,17 +89,13 @@ class Settings:
     child_max_tokens: int
     rlm_max_depth: int
     max_children: int
-    compaction_threshold_percent: int
+    compaction_threshold_tokens: int
+    impala_mcp_url: str
     skills_dir: Path
 
     mistral_api_key: str
     mistral_base_url: str
 
-    caii_base_url: str
-    caii_token: str
-    caii_model: str
-    caii_context_window: int
-    caii_max_tokens: int
 
     impala: ImpalaSettings
     atlas: AtlasSettings
@@ -116,9 +112,6 @@ class Settings:
 
     extra: dict[str, str] = field(default_factory=dict)
 
-    @property
-    def caii_enabled(self) -> bool:
-        return bool(self.caii_base_url)
 
 
 @lru_cache(maxsize=1)
@@ -142,15 +135,11 @@ def settings() -> Settings:
         child_max_tokens=_int(os.environ.get("CHILD_MAX_TOKENS"), 16_384),
         rlm_max_depth=_int(os.environ.get("RLM_MAX_DEPTH"), 2),
         max_children=_int(os.environ.get("MAX_CHILDREN"), 6),
-        compaction_threshold_percent=_int(os.environ.get("COMPACTION_THRESHOLD_PERCENT"), 85),
+        compaction_threshold_tokens=_int(os.environ.get("COMPACTION_THRESHOLD_TOKENS"), 96_000),
+        impala_mcp_url=_str("IMPALA_MCP_URL").rstrip("/"),
         skills_dir=Path(_str("SKILLS_DIR", str(home / "skills"))),
         mistral_api_key=_str("MISTRAL_API_KEY"),
         mistral_base_url=_str("MISTRAL_BASE_URL", "https://api.mistral.ai"),
-        caii_base_url=_str("CAII_BASE_URL").rstrip("/"),
-        caii_token=_str("CAII_TOKEN"),
-        caii_model=_str("CAII_MODEL", "ministral-8b"),
-        caii_context_window=_int(os.environ.get("CAII_CONTEXT_WINDOW"), 128_000),
-        caii_max_tokens=_int(os.environ.get("CAII_MAX_TOKENS"), 8_192),
         impala=ImpalaSettings(
             host=_str("IMPALA_HOST", "impalad"),
             port=_int(os.environ.get("IMPALA_PORT"), 21050),
@@ -195,8 +184,6 @@ def redacted(s: Settings) -> dict[str, object]:
         "child_model": s.child_model.selector,
         "rlm_max_depth": s.rlm_max_depth,
         "mistral_api_key": mask(s.mistral_api_key),
-        "caii": s.caii_base_url or "(disabled)",
-        "caii_token": mask(s.caii_token),
         "impala": f"{s.impala.host}:{s.impala.port}/{s.impala.database} auth={s.impala.auth_mechanism} http={s.impala.use_http} ssl={s.impala.use_ssl}",
         "impala_user": s.impala.user,
         "metadata_backend": s.atlas.backend,

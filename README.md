@@ -21,7 +21,7 @@ checklist) and [BURNDOWN.md](BURNDOWN.md) (line items and status).
 | config/ | Harness templates (prompt note, subagent spec) and the Atlas stub catalog |
 | scripts/ | render_config.py and smoke tests |
 | data/ | Dataset schema, generator, loader |
-| deploy/compose/ | Local stack: Impala quickstart, bridge, console, tunnel, Ollama |
+| deploy/compose/ | Local stack: Impala quickstart, bridge, console, tunnel |
 | deploy/cml/ | cmlapi deployment of the Workbench applications |
 
 ## Portability contract
