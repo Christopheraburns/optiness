@@ -61,3 +61,11 @@ def test_rejects_contract_violations(mutate, message):
     mutate(doc)
     with pytest.raises(FindingsError, match=message):
         parse(report(doc))
+
+
+def test_report_text_drops_only_the_trailing_contract_block():
+    from services.common.findings import report_text
+    text = "# Findings\n\nAn example:\n\n```json\n{\"x\": 1}\n```\n\nMore prose.\n\n```json\n{\"findings\": []}\n```\n"
+    assert report_text(text) == "# Findings\n\nAn example:\n\n```json\n{\"x\": 1}\n```\n\nMore prose."
+    assert report_text("no block here\n") == "no block here"
+    assert report_text("") == ""

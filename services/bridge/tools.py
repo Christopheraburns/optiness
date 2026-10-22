@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from services.bridge.runner import Runner
 from services.bridge.store import CANCELLED, DONE, QUEUED, RUNNING, TERMINAL
 from services.common.env import settings
+from services.common.findings import report_text
 
 REPORT_LIMIT = 12_000
 RECENT_EVENTS = 8
@@ -137,10 +138,7 @@ def _report(run_dir: str | None) -> str | None:
     path = Path(run_dir or "") / "findings.md"
     if not run_dir or not path.is_file():
         return None
-    text = path.read_text()
-    # Drop the trailing contract block: the structured findings already carry it.
-    cut = [m.start() for m in re.finditer(r"```json[ \t]*\n", text)]
-    text = (text[:cut[-1]] if cut else text).rstrip()
+    text = report_text(path.read_text())
     return text if len(text) <= REPORT_LIMIT else text[:REPORT_LIMIT] + "\n\n[report truncated]"
 
 

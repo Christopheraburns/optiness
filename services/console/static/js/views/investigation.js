@@ -1,10 +1,11 @@
-// One investigation: header and stats, the bridge's live progress while it runs, and the
-// Investigation (feed + hypotheses) and Swarm tabs on one replay clock. Resolution comes in P3.
+// One investigation: header and stats, the bridge's live progress while it runs, the
+// Investigation (feed + hypotheses) and Swarm tabs on one replay clock, and the Resolution.
 // Live polling repaints only the header and live panel, so a replay in progress is never reset.
 import { api, esc, elapsed, fmtCompact, fmtDuration, fmtInt, fmtWhen, icon, modelTags, post, statusPill } from "../ui.js";
 import { Replay, controls } from "../replay.js";
 import * as feed from "./run-feed.js";
 import * as swarm from "./run-swarm.js";
+import * as resolution from "./run-resolution.js";
 
 const TABS = [["queries", "Investigation"], ["swarm", "Swarm"], ["resolution", "Resolution"]];
 const ACTIVE = new Set(["queued", "running"]);
@@ -85,11 +86,12 @@ export async function render(view, { params, onTimer }) {
     if (offControls) offControls(); offControls = null;
     $("#replay-bar").innerHTML = "";
     const body = $("#tab-body");
+    if (!tl) { body.innerHTML = `<div class="muted">Loading the run's timeline…</div>`; return; }
     if (tab === "resolution") {
-      body.innerHTML = `<div class="empty fade-in"><h3>Resolution</h3><p>What the agent concluded, the evidence behind it, and what it ruled out.</p><p class="muted">Arrives in the next build phase.</p></div>`;
+      if (!run) { body.innerHTML = `<div class="muted">Loading…</div>`; return; }
+      resolution.mount(body, run, tl).then((off) => { mounted = off; });
       return;
     }
-    if (!tl) { body.innerHTML = `<div class="muted">Loading the run's timeline…</div>`; return; }
     if (!tl.replayable && !tl.queries.length && !tl.events.length) {
       body.innerHTML = `<div class="empty"><h3>No activity recorded yet</h3><p>The run's transcripts will appear here as its agents work.</p></div>`;
       return;

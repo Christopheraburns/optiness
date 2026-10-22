@@ -130,3 +130,18 @@ def test_start_refused_with_placeholder_token_on_workbench(client, monkeypatch):
     finally:
         env.settings.cache_clear()
     assert r.status_code == 502 and "placeholder" in r.json()["error"]
+
+
+def test_detail_has_report_without_block_and_system_has_closing_slot(client, tmp_path, monkeypatch):
+    from services.console import server
+    runs = client.get("/api/investigations").json()
+    with_report = next(r for r in runs if r["has_findings"])
+    detail = client.get(f"/api/investigations/{with_report['run_id']}").json()
+    assert detail["report_md"] and "```json" not in detail["report_md"].split("\n")[-1]
+    assert client.get("/api/system").json()["closing_message"] is None  # empty in config/console.json: not shown
+    cfg = tmp_path / "console.json"
+    cfg.write_text('{"closing_message": "A line for the end."}')
+    monkeypatch.setattr(server, "CONSOLE_CONFIG", cfg)
+    assert client.get("/api/system").json()["closing_message"] == "A line for the end."
+    cfg.write_text("not json")
+    assert client.get("/api/system").json()["closing_message"] is None

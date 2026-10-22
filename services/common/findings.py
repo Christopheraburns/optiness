@@ -25,6 +25,12 @@ class FindingsError(ValueError):
     """The report has no contract block, or the block breaks the contract."""
 
 
+def report_text(text: str) -> str:
+    """The written report without its trailing contract block (the structured findings carry it)."""
+    cut = [m.start() for m in re.finditer(r"```json[ \t]*\n", text or "")]
+    return ((text or "")[:cut[-1]] if cut else (text or "")).rstrip()
+
+
 def extract(text: str) -> dict:
     """The last fenced ``json`` block in the report, parsed but not validated."""
     blocks = _FENCE.findall(text or "")

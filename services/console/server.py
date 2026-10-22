@@ -36,6 +36,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
+from services.common.findings import report_text
 from services.console import bridge, launch, overview, timeline
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
@@ -120,9 +121,23 @@ def investigation_json(inv: Investigation) -> dict[str, Any]:
         "root": session_json(inv.root),
         "findings_contract": inv.findings,
         "findings_md": inv.findings_md,
+        "report_md": report_text(inv.findings_md),
         "root_reply": inv.root_reply,
         "other_outputs": [{"name": o.name, "parse_error": o.parse_error} for o in inv.unattributed],
     }
+
+
+CONSOLE_CONFIG = Path(__file__).resolve().parents[2] / "config" / "console.json"
+
+
+def console_config() -> dict[str, Any]:
+    """Engagement wording for the console (config/console.json); empty values are not shown."""
+    try:
+        import json
+        data = json.loads(CONSOLE_CONFIG.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
 
 
 def system_json() -> dict[str, Any]:
@@ -140,6 +155,7 @@ def system_json() -> dict[str, Any]:
         },
         "metadata_backend": s.atlas.backend,
         "bridge_url": s.bridge_public_url or None,
+        "closing_message": console_config().get("closing_message") or None,
         "can_start": not bridge.configured(),
     }
 
