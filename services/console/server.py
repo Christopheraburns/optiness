@@ -7,6 +7,7 @@ Routes
   GET /api/system                    deployment facts for the header and architecture view (no secrets)
   GET /api/investigations            every run, newest first, with summary stats
   GET /api/investigations/{run_id}   one run: session tree, cells, SQL, outputs, findings
+  GET /api/overview[?refresh=1]      bankwide payment health from the warehouse, with the detected anomaly
   GET /api/launch                    what New investigation needs: presets, limits, models, bridge state
   POST /api/launch/preview           the exact prompt the root agent would receive
   POST /api/investigations           start a run through the bridge (start_investigation)
@@ -34,7 +35,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
-from services.console import bridge, launch
+from services.console import bridge, launch, overview
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
 
@@ -195,6 +196,15 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
                 return JSONResponse({"error": str(e)}, status_code=502)
         return guarded
 
+    async def payment_health(request):
+        if not settings().impala.host:
+            return JSONResponse({"available": False, "reason": "No warehouse is configured for the console (IMPALA_HOST)."})
+        try:
+            data = await asyncio.to_thread(overview.overview, request.query_params.get("refresh") == "1")
+        except Exception as e:  # noqa: BLE001 - surface the warehouse's own message, never secrets
+            return JSONResponse({"available": False, "reason": f"The warehouse query failed: {type(e).__name__}: {str(e)[:300]}"})
+        return JSONResponse({"available": True, **data})
+
     async def launch_info(request):
         s = settings()
         return JSONResponse({
@@ -247,6 +257,7 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
         Route("/api/investigations/{run_id}", investigation),
         Route("/api/investigations/{run_id}/cancel", action(cancel), methods=["POST"]),
         Route("/api/launch", launch_info),
+        Route("/api/overview", payment_health),
         Route("/api/launch/preview", action(launch_preview), methods=["POST"]),
         Route("/api/live/{run_id}", live),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),
