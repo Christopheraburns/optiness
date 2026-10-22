@@ -7,10 +7,20 @@ Routes
   GET /api/system                    deployment facts for the header and architecture view (no secrets)
   GET /api/investigations            every run, newest first, with summary stats
   GET /api/investigations/{run_id}   one run: session tree, cells, SQL, outputs, findings
+  GET /api/launch                    what New investigation needs: presets, limits, models, bridge state
+  POST /api/launch/preview           the exact prompt the root agent would receive
+  POST /api/investigations           start a run through the bridge (start_investigation)
+  GET /api/live/{run_id}             the bridge's progress for a run (get_investigation)
+  POST /api/investigations/{run_id}/cancel   stop a run (cancel_investigation)
   GET /healthz                       liveness
+
+POSTs require the header X-Console-Action: a cross-site page cannot set it without a CORS
+preflight this server never grants, so other sites cannot start runs through a signed-in
+browser, whatever host the Workbench proxy presents.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -24,10 +34,12 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
+from services.console import bridge, launch
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
 
 STATIC = Path(__file__).resolve().parent / "static"
+RUN_ID = re.compile(r"inv-\d{8}-\d{6}")
 RESULT_CHARS = 6_000   # a cell's printed result, enough for a result table; the full text stays on disk
 CODE_CHARS = 20_000
 
@@ -126,6 +138,7 @@ def system_json() -> dict[str, Any]:
         },
         "metadata_backend": s.atlas.backend,
         "bridge_url": s.bridge_public_url or None,
+        "can_start": not bridge.configured(),
     }
 
 
@@ -156,18 +169,85 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
 
     async def investigation(request):
         run_id = request.path_params["run_id"]
-        if not re.fullmatch(r"inv-\d{8}-\d{6}", run_id):
+        if not RUN_ID.fullmatch(run_id):
             return JSONResponse({"error": "not a run id"}, status_code=400)
         inv = runs().get_investigation(run_id)
         if inv is None:
             return JSONResponse({"error": f"no investigation {run_id}"}, status_code=404)
         return JSONResponse(investigation_json(inv))
 
+    def action(handler):
+        """POST guard: same-site requests from the console carry X-Console-Action; JSON bodies only."""
+        async def guarded(request):
+            if request.headers.get("x-console-action") != "1":
+                return JSONResponse({"error": "missing X-Console-Action header"}, status_code=403)
+            try:
+                body = await request.json() if await request.body() else {}
+            except ValueError:
+                return JSONResponse({"error": "body must be JSON"}, status_code=400)
+            if not isinstance(body, dict):
+                return JSONResponse({"error": "body must be a JSON object"}, status_code=400)
+            try:
+                return await handler(request, body)
+            except ValueError as e:
+                return JSONResponse({"error": str(e)}, status_code=400)
+            except bridge.BridgeError as e:
+                return JSONResponse({"error": str(e)}, status_code=502)
+        return guarded
+
+    async def launch_info(request):
+        s = settings()
+        return JSONResponse({
+            "presets": launch.presets(), "max_children": s.max_children,
+            "root_model": model_name(s.root_model.model), "child_model": model_name(s.child_model.model),
+            "bridge": await asyncio.to_thread(bridge.status),
+        })
+
+    async def launch_preview(request, body):
+        question = body.get("question") or ""
+        subagents = body.get("subagents", 3)
+        if not isinstance(subagents, int) or isinstance(subagents, bool):
+            raise ValueError("Workers must be a whole number.")
+        return JSONResponse({"prompt": launch.preview(question or "<your question>", body.get("scope"), subagents)})
+
+    async def start(request, body):
+        if bridge.configured():
+            raise bridge.BridgeError("; ".join(bridge.configured()))
+        question, scope, subagents = launch.validate(body.get("question"), body.get("scope"), body.get("subagents"))
+        args = {"question": question, "subagents": subagents, **({"scope": scope} if scope else {})}
+        started = await asyncio.to_thread(bridge.call, "start_investigation", **args)
+        return JSONResponse({"id": started.get("id"), "status": started.get("status"),
+                             "queue_position": started.get("queue_position")}, status_code=201)
+
+    async def live(request):
+        run_id = request.path_params["run_id"]
+        if not RUN_ID.fullmatch(run_id):
+            return JSONResponse({"error": "not a run id"}, status_code=400)
+        if bridge.configured():
+            return JSONResponse({"available": False, "reason": "; ".join(bridge.configured())})
+        try:
+            view = await asyncio.to_thread(bridge.call, "get_investigation", id=run_id)
+        except bridge.BridgeError as e:
+            return JSONResponse({"available": False, "reason": str(e)})
+        return JSONResponse({"available": True, **view})
+
+    async def cancel(request, body):
+        run_id = request.path_params["run_id"]
+        if not RUN_ID.fullmatch(run_id):
+            raise ValueError("not a run id")
+        result = await asyncio.to_thread(bridge.call, "cancel_investigation", id=run_id)
+        return JSONResponse({"id": run_id, "status": result.get("status")})
+
     return Starlette(routes=[
         Route("/", index),
         Route("/healthz", healthz),
         Route("/api/system", system),
         Route("/api/investigations", investigations),
+        Route("/api/investigations", action(start), methods=["POST"]),
         Route("/api/investigations/{run_id}", investigation),
+        Route("/api/investigations/{run_id}/cancel", action(cancel), methods=["POST"]),
+        Route("/api/launch", launch_info),
+        Route("/api/launch/preview", action(launch_preview), methods=["POST"]),
+        Route("/api/live/{run_id}", live),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),
     ])

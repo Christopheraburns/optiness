@@ -177,6 +177,7 @@ services:
     environment:
       - CDSW_APP_PORT=8090
       - BIND_HOST=0.0.0.0
+      - BRIDGE_INTERNAL_URL=http://bridge:8080
     command: ["python", "services/console/app.py"]
     ports:
       - "127.0.0.1:${CONSOLE_PORT:-18090}:8090"

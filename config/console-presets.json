@@ -1,0 +1,26 @@
+{
+  "_note": "Questions offered by the console's New investigation page. Engagement content: edit per customer. Symptom-only: never put a planted cause, segment or date here (this repo is readable by the agent).",
+  "presets": [
+    {
+      "id": "decline-rate",
+      "title": "Decline-rate investigation",
+      "description": "The canonical symptom-only question used for every full investigation (E8, K1).",
+      "question": "Payments operations reports that card authorization decline rates rose for a period during the data's date range. Determine whether there was a real increase in declines in payment_transactions, when it started and ended, which transactions were affected, and what caused it. Rule out alternative explanations.",
+      "subagents": 3
+    },
+    {
+      "id": "smoke",
+      "title": "Smoke test",
+      "description": "A quick end-to-end check of the bridge, one worker and the warehouse (scripts/mcp_smoke.py).",
+      "question": "Smoke test: how many rows are in payment_transactions, and how many are declined (approved = false)? Use one subagent to count the declines.",
+      "subagents": 1
+    },
+    {
+      "id": "kill-test",
+      "title": "Row-count check",
+      "description": "The minimal one-worker run used by the restart and cancel tests (scripts/kill_test.py).",
+      "question": "Kill test: how many rows are in payment_transactions? Use one subagent to count them.",
+      "subagents": 1
+    }
+  ]
+}

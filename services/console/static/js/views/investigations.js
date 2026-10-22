@@ -67,6 +67,7 @@ export async function render(view, { onTimer }) {
         <h1 class="page-title">Investigations</h1>
         <p class="page-sub">Every question the agent has worked: who it delegated to, the SQL it ran on the warehouse, and what it concluded.</p>
       </div>
+      <a class="btn primary" href="#/new">${icon.plus}New investigation</a>
     </header>
     <div id="kpis"></div>
     <div class="toolbar">

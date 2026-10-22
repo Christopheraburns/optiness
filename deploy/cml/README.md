@@ -48,6 +48,8 @@ visible only to the project's administrators, never in git.
 | `IMPALA_AUTH_MECHANISM`, `IMPALA_USE_HTTP`, `IMPALA_HTTP_PATH`, `IMPALA_USE_SSL` | ✓ | | `LDAP`, `true`, `cliservice`, `true` |
 | `IMPALA_USER`, `IMPALA_PASSWORD` | ✓ | | **The Ranger-restricted agent login only** (see below) |
 | `METADATA_BACKEND` | ✓ | | `stub` until Atlas is wired (C3) |
+| `BRIDGE_PUBLIC_URL` | ✓ | ✓ | The bridge Application's URL. The console starts, watches and stops runs through it |
+| `BRIDGE_BEARER_TOKEN` | ✓ | ✓ | Also used by the console, server-side only; never the `change-me` placeholder on Workbench |
 | `OPTINESS_ROOT` | opt. | opt. | Only if the launcher cannot find the checkout |
 
 Not needed on Workbench: `CDSW_APP_PORT`, `BIND_HOST`, `DEPLOY_TARGET` (detected), and the

@@ -105,6 +105,7 @@ class Settings:
     bridge_data_dir: Path
     investigation_timeout_s: int
     bridge_public_url: str
+    bridge_internal_url: str
     console_refresh_s: int
 
     data_scale: int
@@ -166,6 +167,7 @@ def settings() -> Settings:
         bridge_data_dir=Path(_str("BRIDGE_DATA_DIR", str(home / "data" / "bridge"))),
         investigation_timeout_s=_int(os.environ.get("INVESTIGATION_TIMEOUT_S"), 3600),
         bridge_public_url=_str("BRIDGE_PUBLIC_URL").rstrip("/"),
+        bridge_internal_url=_str("BRIDGE_INTERNAL_URL").rstrip("/"),
         console_refresh_s=_int(os.environ.get("CONSOLE_REFRESH_S"), 5),
         data_scale=_int(os.environ.get("DATA_SCALE"), 2_000_000),
         data_seed=_int(os.environ.get("DATA_SEED"), 20261027),

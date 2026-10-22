@@ -2,6 +2,7 @@
 import { esc } from "./ui.js";
 import * as investigations from "./views/investigations.js";
 import * as investigation from "./views/investigation.js";
+import * as launch from "./views/new.js";
 
 const placeholder = (title, eyebrow, text) => ({
   render(view) {
@@ -15,6 +16,7 @@ const placeholder = (title, eyebrow, text) => ({
 const ROUTES = [
   [/^investigations\/(inv-\d{8}-\d{6})$/, "investigations", investigation],
   [/^investigations$/, "investigations", investigations],
+  [/^new$/, "investigations", launch],
   [/^overview$/, "overview", placeholder("Payment health", "Meridian Financial", "Authorization success over time, with anomalies detected from the warehouse.")],
   [/^dataset$/, "dataset", placeholder("The lakehouse", "Cloudera Data Warehouse", "The Iceberg tables the agents query: size, shape and relationships.")],
   [/^architecture$/, "architecture", placeholder("How it works", "Architecture", "Mistral Studio, the Prime Agent harness on Cloudera AI Workbench, and the warehouse, with live status.")],

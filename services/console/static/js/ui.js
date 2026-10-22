@@ -14,7 +14,20 @@ export async function api(path) {
   return response.json();
 }
 
-export const fmtInt = (n) => (n === null || n === undefined ? "–" : Number(n).toLocaleString("en-US"));
+// Actions carry X-Console-Action: the server refuses POSTs without it (cross-site requests cannot set it).
+export async function post(path, body = {}) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json", "X-Console-Action": "1" },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await response.json(); } catch { /* empty or not JSON */ }
+  if (!response.ok) throw new Error(data.error || `${path}: ${response.status}`);
+  return data;
+}
+
+export const fmtInt =(n) => (n === null || n === undefined ? "–" : Number(n).toLocaleString("en-US"));
 
 export function fmtCompact(n) {
   if (n === null || n === undefined) return "–";
@@ -64,6 +77,7 @@ export function modelTags(run, { stacked = false } = {}) {
 }
 
 export const icon = {
+  plus: `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>`,
   back: `<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   chevron: `<svg class="chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   search: `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5" stroke-linecap="round"/></svg>`,
