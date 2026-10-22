@@ -153,6 +153,9 @@ services:
   bridge:
     <<: *runtime-app
     container_name: optiness-bridge
+    # Room for the bridge's shutdown: it interrupts a running investigation (up to 30 s)
+    # and stops its daemon sessions before exiting. Docker's default is 10 s.
+    stop_grace_period: 45s
     environment:
       - CDSW_APP_PORT=8080
       - BIND_HOST=0.0.0.0

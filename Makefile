@@ -8,7 +8,7 @@ PY := python3
 # Meridian (separate repo) generates the data; see its config/demo.yaml.
 MERIDIAN_PUBLIC_DIR ?= ../meridian/data/demo-public
 
-.PHONY: investigate image-local test-impala help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
+.PHONY: investigate image-local test-impala test-bridge kill-test mcp-smoke studio-check help env up down logs render data validate-data smoke deploy-cml screens image shell impala-shell tunnel test schema
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -69,6 +69,18 @@ test: ## Unit tests (metadata backends)
 
 test-impala: ## Skill tests against local Impala, in the agent kernel's Python
 	$(COMPOSE) exec -T bridge bash -lc '$$PRIME_AGENT_KERNEL_PYTHON /home/cdsw/tests/test_lakehouse.py'
+
+test-bridge: ## Bridge transport and auth tests, in the agent kernel's Python
+	$(COMPOSE) exec -T bridge bash -lc 'for t in test_bridge test_tools; do $$PRIME_AGENT_KERNEL_PYTHON /home/cdsw/tests/$$t.py || exit 1; done'
+
+mcp-smoke: ## F7: full MCP tool sequence against URL (default local bridge); Q="..." N=subagents
+	$(PY) scripts/mcp_smoke.py --url $(or $(URL),http://127.0.0.1:18080) $(if $(Q),--question "$(Q)") --subagents $(or $(N),1)
+
+studio-check: ## G1: Mistral API key works in the mistralai SDK (models, connectors, agents)
+	uv run --quiet --no-project --with 'mistralai>=3.3,<4' python scripts/studio.py check
+
+kill-test: ## F6: interrupt live runs (cancel, SIGTERM, SIGKILL) and check nothing is left running; S="A B C"
+	$(PY) scripts/kill_test.py $(S)
 
 deploy-cml: ## Create or update the Workbench applications with cmlapi
 	@test -f deploy/cml/deploy.py || (echo "deploy/cml/deploy.py not written yet (BURNDOWN I3)"; exit 1)
