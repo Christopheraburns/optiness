@@ -4,6 +4,7 @@ import * as investigations from "./views/investigations.js";
 import * as investigation from "./views/investigation.js";
 import * as launch from "./views/new.js";
 import * as overview from "./views/overview.js";
+import * as dataset from "./views/dataset.js";
 
 const placeholder = (title, eyebrow, text) => ({
   render(view) {
@@ -19,7 +20,7 @@ const ROUTES = [
   [/^investigations$/, "investigations", investigations],
   [/^new$/, "investigations", launch],
   [/^overview$/, "overview", overview],
-  [/^dataset$/, "dataset", placeholder("The lakehouse", "Cloudera Data Warehouse", "The Iceberg tables the agents query: size, shape and relationships.")],
+  [/^dataset$/, "dataset", dataset],
   [/^architecture$/, "architecture", placeholder("How it works", "Architecture", "Mistral Studio, the Prime Agent harness on Cloudera AI Workbench, and the warehouse, with live status.")],
 ];
 

@@ -9,6 +9,7 @@ Routes
   GET /api/investigations/{run_id}   one run: session tree, cells, SQL, outputs, findings
   GET /api/investigations/{run_id}/timeline   the run as a timeline: queries, events, sessions, hypotheses
   GET /api/overview[?refresh=1]      bankwide payment health from the warehouse, with the detected anomaly
+  GET /api/dataset[?refresh=1]       the lakehouse: tables, rows, format, partitions, relationships
   GET /api/launch                    what New investigation needs: presets, limits, models, bridge state
   POST /api/launch/preview           the exact prompt the root agent would receive
   POST /api/investigations           start a run through the bridge (start_investigation)
@@ -37,7 +38,7 @@ from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
 from services.common.findings import report_text
-from services.console import bridge, launch, overview, timeline
+from services.console import bridge, dataset, launch, overview, timeline
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
 
@@ -231,6 +232,15 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
             return JSONResponse({"available": False, "reason": f"The warehouse query failed: {type(e).__name__}: {str(e)[:300]}"})
         return JSONResponse({"available": True, **data})
 
+    async def lakehouse(request):
+        if not settings().impala.host:
+            return JSONResponse({"available": False, "reason": "No warehouse is configured for the console (IMPALA_HOST)."})
+        try:
+            data = await asyncio.to_thread(dataset.dataset, request.query_params.get("refresh") == "1")
+        except Exception as e:  # noqa: BLE001 - surface the warehouse's own message, never secrets
+            return JSONResponse({"available": False, "reason": f"The warehouse query failed: {type(e).__name__}: {str(e)[:300]}"})
+        return JSONResponse({"available": True, "database": settings().impala.database, **data})
+
     async def launch_info(request):
         s = settings()
         return JSONResponse({
@@ -285,6 +295,7 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
         Route("/api/investigations/{run_id}/timeline", run_timeline),
         Route("/api/launch", launch_info),
         Route("/api/overview", payment_health),
+        Route("/api/dataset", lakehouse),
         Route("/api/launch/preview", action(launch_preview), methods=["POST"]),
         Route("/api/live/{run_id}", live),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),
