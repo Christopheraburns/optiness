@@ -10,6 +10,7 @@ Routes
   GET /api/investigations/{run_id}/timeline   the run as a timeline: queries, events, sessions, hypotheses
   GET /api/overview[?refresh=1]      bankwide payment health from the warehouse, with the detected anomaly
   GET /api/dataset[?refresh=1]       the lakehouse: tables, rows, format, partitions, relationships
+  GET /api/architecture              each part of the system and its live status, with the latest run's numbers
   GET /api/launch                    what New investigation needs: presets, limits, models, bridge state
   POST /api/launch/preview           the exact prompt the root agent would receive
   POST /api/investigations           start a run through the bridge (start_investigation)
@@ -38,7 +39,7 @@ from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
 from services.common.findings import report_text
-from services.console import bridge, dataset, launch, overview, timeline
+from services.console import architecture, bridge, dataset, launch, overview, timeline
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
 
@@ -241,6 +242,34 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
             return JSONResponse({"available": False, "reason": f"The warehouse query failed: {type(e).__name__}: {str(e)[:300]}"})
         return JSONResponse({"available": True, "database": settings().impala.database, **data})
 
+    async def system_map(request):
+        s = settings()
+        wh, hs = await asyncio.gather(asyncio.to_thread(architecture.warehouse), asyncio.to_thread(architecture.harness))
+        summaries = runs().list_investigations()
+        # The harness panel shows a real run: the latest with findings and parallel workers, else any with findings.
+        latest = next((x for x in summaries if x.has_findings and x.children >= 2), None) or \
+            next((x for x in summaries if x.has_findings), None)
+        latest_json = None
+        if latest:
+            inv = runs().get_investigation(latest.run_id)
+            if inv:
+                tl = timeline.build(inv)
+                latest_json = {**summary_json(inv),
+                               "reports": sum(1 for e in tl["events"] if e["kind"] == "report"),
+                               "reprompts": sum(1 for e in tl["events"] if e["kind"] == "notice"),
+                               "evidence_matched": sum(1 for h in tl["hypotheses"] for e in h["evidence"] if e["at"] is not None)}
+        return JSONResponse({
+            "console": {"state": "up", "deploy_target": s.deploy_target},
+            "studio": architecture.studio(), "harness": hs, "warehouse": wh,
+            # The models the bridge actually runs with; the console's own settings only if it is down.
+            "models": {"root": model_name(hs.get("root_model") or s.root_model.model),
+                       "child": model_name(hs.get("child_model") or s.child_model.model),
+                       "source": "bridge" if hs.get("root_model") else "console settings",
+                       "provider": "Mistral API", "max_children": s.max_children},
+            "runs": {"total": len(summaries), "running": sum(1 for x in summaries if x.status == "running")},
+            "latest": latest_json,
+        })
+
     async def launch_info(request):
         s = settings()
         return JSONResponse({
@@ -296,6 +325,7 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
         Route("/api/launch", launch_info),
         Route("/api/overview", payment_health),
         Route("/api/dataset", lakehouse),
+        Route("/api/architecture", system_map),
         Route("/api/launch/preview", action(launch_preview), methods=["POST"]),
         Route("/api/live/{run_id}", live),
         Mount("/static", StaticFiles(directory=STATIC), name="static"),

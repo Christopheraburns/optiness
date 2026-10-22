@@ -1,19 +1,10 @@
 // Investigation Console: hash router and shell. Views render into <main id="view">.
-import { esc } from "./ui.js";
 import * as investigations from "./views/investigations.js";
 import * as investigation from "./views/investigation.js";
 import * as launch from "./views/new.js";
 import * as overview from "./views/overview.js";
 import * as dataset from "./views/dataset.js";
-
-const placeholder = (title, eyebrow, text) => ({
-  render(view) {
-    view.innerHTML = `
-      <header class="page-head"><div><div class="eyebrow">${esc(eyebrow)}</div><h1 class="page-title">${esc(title)}</h1>
-      <p class="page-sub">${esc(text)}</p></div></header>
-      <div class="empty fade-in"><h3>${esc(title)}</h3><p>Arrives in a later build phase.</p></div>`;
-  },
-});
+import * as architecture from "./views/architecture.js";
 
 const ROUTES = [
   [/^investigations\/(inv-\d{8}-\d{6})$/, "investigations", investigation],
@@ -21,7 +12,7 @@ const ROUTES = [
   [/^new$/, "investigations", launch],
   [/^overview$/, "overview", overview],
   [/^dataset$/, "dataset", dataset],
-  [/^architecture$/, "architecture", placeholder("How it works", "Architecture", "Mistral Studio, the Prime Agent harness on Cloudera AI Workbench, and the warehouse, with live status.")],
+  [/^architecture$/, "architecture", architecture],
 ];
 
 let timers = [];
