@@ -7,6 +7,8 @@ pyarrow==26.0.0
 pandas==2.3.3
 mcp>=2,<3
 fastmcp==4.1.2
-streamlit==1.66.0
+streamlit==1.66.0  # unused since the console moved to Starlette (2026-10-22); drop at the next image rebuild
+starlette==1.9.0   # console server; already present via fastmcp, pinned so the console does not drift
+uvicorn==0.54.0
 python-dotenv==1.2.4
 pydantic>=2.12,<3

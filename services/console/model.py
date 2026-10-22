@@ -106,6 +106,7 @@ class Investigation:
     summary: InvestigationSummary
     root: Session
     findings_md: str = ""
+    findings: dict | None = None                             # findings.json: the E10 contract, when written
     root_reply: str = ""                                     # root's streamed text, joined
     unattributed: list[OutputFile] = field(default_factory=list)  # outputs no child claims
 

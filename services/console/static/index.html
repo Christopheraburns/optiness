@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prime Agent · Investigation Console</title>
+  <link rel="icon" href="/static/img/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="product" href="#/investigations" aria-label="Investigation Console home">
+        <img class="product-mark" src="/static/img/mark.svg" alt="" width="34" height="34">
+        <span class="product-text">
+          <span class="product-eyebrow">Prime Agent</span>
+          <span class="product-name">Investigation Console</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Views">
+        <a href="#/overview" data-view="overview">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 5-7 4 5" /><path d="M3 21h18" /></svg>
+          Overview
+        </a>
+        <a href="#/dataset" data-view="dataset">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.8" /><path d="M4.5 5.5v6.5c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V5.5" /><path d="M4.5 12v6.5c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V12" /></svg>
+          Dataset
+        </a>
+        <a href="#/architecture" data-view="architecture">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="6" rx="1.5" /><rect x="14" y="3" width="7" height="6" rx="1.5" /><rect x="8.5" y="15" width="7" height="6" rx="1.5" /><path d="M6.5 9v3h11V9M12 12v3" /></svg>
+          Architecture
+        </a>
+        <a href="#/investigations" data-view="investigations">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5L21 21" /><path d="M7.5 11.5l2-2.5 2 2 2-3" /></svg>
+          Investigations
+          <span class="nav-count" id="nav-count"></span>
+        </a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="partners">
+          <div class="partner">
+            <span class="partner-label">Runs on</span>
+            <img class="logo-cloudera" src="/static/brand/cloudera-white.png" alt="Cloudera">
+          </div>
+          <div class="partner">
+            <span class="partner-label">Models by</span>
+            <img class="logo-mistral" src="/static/brand/mistral-lockup-dark.svg" alt="Mistral">
+          </div>
+        </div>
+      </div>
+    </aside>
+    <main class="main" id="view" tabindex="-1"></main>
+  </div>
+  <script src="/static/vendor/highlight.min.js"></script>
+  <script src="/static/vendor/hljs-sql.min.js"></script>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

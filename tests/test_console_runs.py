@@ -191,22 +191,3 @@ def test_sql_in_code():
         "SHOW TABLES",
     ]
     assert sql_in_code('x = """SELECT 1"""\nthis is not python(') == ["SELECT 1"]
-
-
-def test_page_renders_fixtures(monkeypatch):
-    """The Streamlit page runs end to end against the fixtures."""
-    AppTest = pytest.importorskip("streamlit.testing.v1").AppTest
-
-    from services.common import env
-
-    monkeypatch.setenv("AGENT_WORKDIR", str(FIX))
-    monkeypatch.setenv("PRIME_AGENT_CODING_AGENT_DIR", str(AGENT))
-    env.settings.cache_clear()
-    try:
-        at = AppTest.from_file(str(ROOT / "services" / "console" / "page.py"), default_timeout=30).run()
-        assert not at.exception, at.exception
-        assert at.radio[0].options[0].startswith("🟢 inv-20261021-201822")
-        at.radio[0].set_value("inv-20261021-184608").run()
-        assert not at.exception, at.exception
-    finally:
-        env.settings.cache_clear()

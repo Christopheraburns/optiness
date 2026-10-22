@@ -1,5 +1,5 @@
-"""investigation-console. Placeholder until burn-down H1. Launches Streamlit
-on the application port so the stack and a Workbench application come up."""
+"""investigation-console: serves the console (services/console/server.py) on the
+application port with uvicorn. On Workbench, deploy/cml/console.py launches this."""
 from __future__ import annotations
 
 # --- interpreter shim -------------------------------------------------------
@@ -16,7 +16,6 @@ if _KP and _os.path.exists(_KP):
         _os.execv(_KP, [_KP, *_sys.argv])
 # ---------------------------------------------------------------------------
 
-import os
 import sys
 from pathlib import Path
 
@@ -24,17 +23,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 if __name__ == "__main__":
-    from streamlit.web import cli as stcli
+    import uvicorn
 
     from services.common.env import settings
+    from services.console.server import create_app
 
     s = settings()
-    sys.argv = [
-        "streamlit", "run", str(ROOT / "services" / "console" / "page.py"),
-        "--server.port", str(s.app_port),
-        "--server.address", s.bind_host,
-        "--server.headless", "true",
-        "--browser.gatherUsageStats", "false",
-        "--server.baseUrlPath", os.environ.get("STREAMLIT_BASE_URL_PATH", ""),
-    ]
-    raise SystemExit(stcli.main())
+    uvicorn.run(create_app(), host=s.bind_host, port=s.app_port, log_level="info")

@@ -9,6 +9,7 @@ What each file gives us:
                  child spawn/status (`session_info_update` _meta.subagents),
                  end of turn (`result.stopReason`). No timestamps.
   findings.md    the root's report, shown as-is
+  findings.json  the findings contract (claims, evidence, ruled out), when the run wrote it
   *.json, *.csv  child outputs; free-form, possibly invalid JSON
   session-artifacts/<root sid>/sub-<id>/rlm-subagent.json + <sid>.jsonl
                  per child: name, model, status, prompt (names its output
@@ -37,7 +38,7 @@ from services.console.model import (
 META = "ai.primeintellect.prime-agent"
 RUN_ID = re.compile(r"^inv-(\d{8})-(\d{6})$")
 OUTPUT_SUFFIXES = {".json", ".csv"}
-RESERVED = {"session.json"}
+RESERVED = {"session.json", "findings.json"}
 MAX_OUTPUT_BYTES = 512_000
 SQL_START = re.compile(r"^\s*(SELECT|WITH|SHOW|DESCRIBE|EXPLAIN|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b", re.I)
 # Errors that show up in a cell's output even when the model caught the exception.
@@ -416,8 +417,10 @@ class FileRunSource:
             started=root.started, ended=root.ended,
             children=len(root.children), has_findings=bool(findings),
         )
+        contract = _read_json(run_dir / "findings.json")
         return Investigation(
             summary=summary, root=root, findings_md=findings, root_reply=ev.reply_text,
+            findings=contract if isinstance(contract, dict) else None,
             unattributed=[o for n, o in outputs.items() if n not in claimed],
         )
 
