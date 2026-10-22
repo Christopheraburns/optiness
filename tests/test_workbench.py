@@ -42,6 +42,9 @@ def test_environment_points_paths_at_a_subdirectory_checkout(tmp_path):
     assert env["PYTHONPATH"].split(":") == [str(root / "skills/lakehouse/src"), str(root / "skills/atlas/src")]
     at_home = workbench.environment(root, {"HOME": str(root)})
     assert "BRIDGE_DATA_DIR" not in at_home  # project created from git: env.py's $HOME defaults already hold
+    # ...but env.py has no PYTHONPATH default, so the skills path is set either way (found on the 50M run).
+    assert at_home["PYTHONPATH"].split(":") == [str(root / "skills/lakehouse/src"), str(root / "skills/atlas/src")]
+    assert workbench.environment(root, {"HOME": str(root), "PYTHONPATH": "/mine"})["PYTHONPATH"] == "/mine"
 
 
 def test_launch_streams_output_and_returns_the_service_status(tmp_path, monkeypatch, capsys):

@@ -20,8 +20,8 @@ Prime Agent config) never runs. `services/common/workbench.py` therefore:
 
 1. Finds the checkout (`OPTINESS_ROOT`, else the working directory, its parents or subdirectories).
 2. Points path defaults (`SKILLS_DIR`, `AGENT_WORKDIR`, `BRIDGE_DATA_DIR`, `ATLAS_STUB_PATH`,
-   `DATA_STAGING_DIR`, `PYTHONPATH` for the skills) at the checkout when it is not `$HOME`.
-   Values set on the Application always win.
+   `DATA_STAGING_DIR`) at the checkout when it is not `$HOME`, and always sets `PYTHONPATH` so the
+   agent kernel can import the skills. Values set on the Application always win.
 3. Bridge only: renders `~/.prime/agent/models.json` and `settings.json` (`scripts/render_config.py`).
 4. Runs the service as a child process under `PRIME_AGENT_KERNEL_PYTHON`, streams its output
    to the Application log, forwards SIGTERM so the bridge can stop its run and sessions, and

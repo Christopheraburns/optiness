@@ -45,8 +45,9 @@ def environment(root: Path, base: dict[str, str] | None = None) -> dict[str, str
                               ("AGENT_WORKDIR", "data/agent"), ("BRIDGE_DATA_DIR", "data/bridge"),
                               ("DATA_STAGING_DIR", "data/staging")):
             env.setdefault(key, str(root / relative))
-        # The agent kernel imports its skills from PYTHONPATH; the daemon inherits this environment.
-        env.setdefault("PYTHONPATH", os.pathsep.join(str(root / "skills" / name / "src") for name in ("lakehouse", "atlas")))
+    # The agent kernel imports its skills from PYTHONPATH and the daemon inherits this environment.
+    # env.py has no default for it (Compose sets it from .env), so set it wherever the checkout is.
+    env.setdefault("PYTHONPATH", os.pathsep.join(str(root / "skills" / name / "src") for name in ("lakehouse", "atlas")))
     return env
 
 
