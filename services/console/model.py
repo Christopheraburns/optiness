@@ -50,6 +50,17 @@ class Cell:
     ok: bool = True
     duration_ms: int | None = None
     sql: list[str] = field(default_factory=list)
+    started: datetime | None = None   # when the model issued the call (transcript)
+    ended: datetime | None = None     # when its result came back
+
+
+@dataclass
+class Message:
+    """Something a session said or received, in time order (from its transcript)."""
+    at: datetime | None
+    kind: str                  # "text" (its own reasoning), "report" (a child's message to it), "notice" (child exited)
+    text: str
+    sender: str = ""           # for report/notice: the child's session name
 
 
 @dataclass
@@ -63,6 +74,7 @@ class Session:
     ended: datetime | None = None
     tokens: int | None = None
     cells: list[Cell] = field(default_factory=list)
+    messages: list[Message] = field(default_factory=list)
     output: OutputFile | None = None
     children: list[Session] = field(default_factory=list)
 

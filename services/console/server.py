@@ -7,6 +7,7 @@ Routes
   GET /api/system                    deployment facts for the header and architecture view (no secrets)
   GET /api/investigations            every run, newest first, with summary stats
   GET /api/investigations/{run_id}   one run: session tree, cells, SQL, outputs, findings
+  GET /api/investigations/{run_id}/timeline   the run as a timeline: queries, events, sessions, hypotheses
   GET /api/overview[?refresh=1]      bankwide payment health from the warehouse, with the detected anomaly
   GET /api/launch                    what New investigation needs: presets, limits, models, bridge state
   POST /api/launch/preview           the exact prompt the root agent would receive
@@ -35,7 +36,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from services.common.env import settings
-from services.console import bridge, launch, overview
+from services.console import bridge, launch, overview, timeline
 from services.console.model import Investigation, InvestigationSource, Session
 from services.console.runs import FileRunSource
 
@@ -196,6 +197,15 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
                 return JSONResponse({"error": str(e)}, status_code=502)
         return guarded
 
+    async def run_timeline(request):
+        run_id = request.path_params["run_id"]
+        if not RUN_ID.fullmatch(run_id):
+            return JSONResponse({"error": "not a run id"}, status_code=400)
+        inv = runs().get_investigation(run_id)
+        if inv is None:
+            return JSONResponse({"error": f"no investigation {run_id}"}, status_code=404)
+        return JSONResponse(timeline.build(inv))
+
     async def payment_health(request):
         if not settings().impala.host:
             return JSONResponse({"available": False, "reason": "No warehouse is configured for the console (IMPALA_HOST)."})
@@ -256,6 +266,7 @@ def create_app(source: InvestigationSource | None = None) -> Starlette:
         Route("/api/investigations", action(start), methods=["POST"]),
         Route("/api/investigations/{run_id}", investigation),
         Route("/api/investigations/{run_id}/cancel", action(cancel), methods=["POST"]),
+        Route("/api/investigations/{run_id}/timeline", run_timeline),
         Route("/api/launch", launch_info),
         Route("/api/overview", payment_health),
         Route("/api/launch/preview", action(launch_preview), methods=["POST"]),

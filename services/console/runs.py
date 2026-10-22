@@ -32,13 +32,14 @@ from typing import Any, Callable, Iterable
 
 from services.console.model import (
     ABANDONED, DONE, ENDED, RUNNING, STALLED,
-    Cell, Evidence, Investigation, InvestigationSummary, OutputFile, Session,
+    Cell, Evidence, Investigation, InvestigationSummary, Message, OutputFile, Session,
 )
 
 META = "ai.primeintellect.prime-agent"
 RUN_ID = re.compile(r"^inv-(\d{8})-(\d{6})$")
 OUTPUT_SUFFIXES = {".json", ".csv"}
 RESERVED = {"session.json", "findings.json"}
+CHILD_TAG = re.compile(r"^\[(?:agent-message from|child-exited: [\w-]+) child:([^\]]+)\]\s*")
 MAX_OUTPUT_BYTES = 512_000
 SQL_START = re.compile(r"^\s*(SELECT|WITH|SHOW|DESCRIBE|EXPLAIN|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b", re.I)
 # Errors that show up in a cell's output even when the model caught the exception.
@@ -237,28 +238,39 @@ class RootEvents:
 # --- prime-agent transcripts -----------------------------------------------
 
 def transcript_session(path: Path, sess: Session) -> None:
-    """Fill timing, tokens and cells from a prime-agent session transcript."""
+    """Fill timing, tokens, cells (with their times) and messages from a prime-agent session transcript."""
     first = last = None
     tokens = 0
     pending: dict[str, Cell] = {}
     cells: list[Cell] = []
+    messages: list[Message] = []
     for e in read_jsonl(path):
         ts = parse_ts(e.get("timestamp"))
         if ts:
             first = first or ts
             last = ts
+        if e.get("type") == "custom_message" and isinstance(e.get("content"), str):
+            kind = {"agent_message": "report", "rlm_child_terminal_notice": "notice"}.get(e.get("customType"))
+            if kind:
+                tag = CHILD_TAG.match(e["content"])
+                messages.append(Message(at=ts, kind=kind, text=e["content"][tag.end():] if tag else e["content"],
+                                        sender=tag.group(1) if tag else ""))
+            continue
         if e.get("type") != "message":
             continue
         m = e.get("message") or {}
         if m.get("role") == "assistant":
             tokens += ((m.get("usage") or {}).get("totalTokens") or 0)
+            text = "".join(p.get("text", "") for p in m.get("content") or [] if isinstance(p, dict) and p.get("type") == "text").strip()
+            if text:
+                messages.append(Message(at=ts, kind="text", text=text))
             for part in m.get("content") or []:
                 if isinstance(part, dict) and part.get("type") == "toolCall":
                     args = part.get("arguments") or {}
                     code = args.get("code", "")
                     if not code:  # a tool other than the REPL, often one that does not exist
                         code = f"# tool call: {part.get('name', '?')}\n{json.dumps(args, indent=2)}"
-                    cell = Cell(code=code, sql=sql_in_code(code))
+                    cell = Cell(code=code, sql=sql_in_code(code), started=ts)
                     pending[part.get("id", "")] = cell
                     cells.append(cell)
         elif m.get("role") == "toolResult":
@@ -267,10 +279,12 @@ def transcript_session(path: Path, sess: Session) -> None:
                 continue
             details = m.get("details") or {}
             cell.result = result_text(m.get("content"))
+            cell.ended = ts
             cell.duration_ms = _int(details.get("durationMs"))
             cell.ok = details.get("status") != "error" and not m.get("isError") and not ERROR_TEXT.search(cell.result)
     sess.started, sess.ended = first, last
     sess.tokens = tokens or None
+    sess.messages = messages
     if cells:
         sess.cells = cells
 
@@ -290,6 +304,7 @@ class FileRunSource:
         self.stale_after_s = stale_after_s
         self.now = now
         self._cache: dict[str, tuple[tuple, Investigation]] = {}
+        self._root_transcripts: dict[str, Path] = {}
 
     def list_investigations(self) -> list[InvestigationSummary]:
         out = []
@@ -313,6 +328,25 @@ class FileRunSource:
         return inv
 
     # ---------------------------------------------------------------------
+
+    def _transcript_naming(self, run_id: str) -> Path | None:
+        """The root transcript for a run with no children yet: its task text contains the run id.
+        Only transcripts written since the run started are read, and only their first 64 KB."""
+        if not self.agent_dir or not (self.agent_dir / "sessions").is_dir():
+            return None
+        if run_id in self._root_transcripts:
+            return self._root_transcripts[run_id]
+        started = run_started(run_id)
+        since = started.timestamp() - 120 if started else 0
+        needle = run_id.encode()
+        for path in sorted((self.agent_dir / "sessions").glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+            if path.stat().st_mtime < since:
+                break
+            with path.open("rb") as f:
+                if needle in f.read(65_536):
+                    self._root_transcripts[run_id] = path
+                    return path
+        return None
 
     def _run_dirs(self) -> list[Path]:
         if not self.runs_dir.is_dir():
@@ -400,10 +434,24 @@ class FileRunSource:
             root.children.append(child)
 
         root_transcript = self.agent_dir / "sessions" / f"{root_sid}.jsonl" if (self.agent_dir and root_sid) else None
+        if not (root_transcript and root_transcript.exists()):
+            # No child yet to point at the root: find the transcript whose task names this run.
+            root_transcript = self._transcript_naming(run_id)
         if root_transcript and root_transcript.exists():
             cells = root.cells
             transcript_session(root_transcript, root)
-            root.cells = cells  # events are the contract for the root's cells
+            # Events are the contract for the root's cells; the transcript supplies their times,
+            # matched in order by the code they ran.
+            timed: dict[str, list[Cell]] = {}
+            for c in root.cells:
+                timed.setdefault(c.code.strip(), []).append(c)
+            for c in cells:
+                match = timed.get(c.code.strip())
+                if match:
+                    t = match.pop(0)
+                    c.started, c.ended = t.started, t.ended
+                    c.duration_ms = c.duration_ms or t.duration_ms
+            root.cells = cells
         if not root.started:
             root.started = run_started(run_id)
         if status != RUNNING:
